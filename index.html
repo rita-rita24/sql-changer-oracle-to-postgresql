@@ -1,0 +1,2087 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SQL変換</title>
+  <link rel="icon" type="image/svg+xml" sizes="any" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz48cGF0aCBmaWxsPSIjZGZmN2YyIiBkPSJNMTIgMTNoNDBhNCA0IDAgMCAxIDQgNHYzMGE0IDQgMCAwIDEtNCA0SDEyYTQgNCAwIDAgMS00LTRWMTdhNCA0IDAgMCAxIDQtNFoiLz48cGF0aCBmaWxsPSIjZjk3MzE2IiBkPSJNMTMgMjRjMC00IDUtNyAxMS03czExIDMgMTEgN3YxMmMwIDQtNSA3LTExIDdzLTExLTMtMTEtN1YyNFoiLz48ZWxsaXBzZSBjeD0iMjQiIGN5PSIyNCIgcng9IjExIiByeT0iNyIgZmlsbD0iI2ZkYmE3NCIvPjxwYXRoIHN0cm9rZT0iI2ZmZjdlZCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIGQ9Ik0xNSAzMGMyIDMgMTUgMyAxOCAwTTE1IDM2YzIgMyAxNSAzIDE4IDAiLz48cGF0aCBmaWxsPSIjMGY3NjZlIiBkPSJNMjkgMzFoMTF2LTVsMTEgOC0xMSA4di01SDI5eiIvPjxwYXRoIGZpbGw9IiMwODkxYjIiIGQ9Ik0zMSAzOWMwLTQgNS03IDExLTdzMTEgMyAxMSA3djhjMCA0LTUgNy0xMSA3cy0xMS0zLTExLTd2LThaIi8+PGVsbGlwc2UgY3g9IjQyIiBjeT0iMzkiIHJ4PSIxMSIgcnk9IjciIGZpbGw9IiM2N2U4ZjkiLz48cGF0aCBzdHJva2U9IiNlY2ZlZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBkPSJNMzMgNDVjMiAzIDE1IDMgMTggMCIvPjwvc3ZnPg==">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:FILL@0..1">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f7fb;
+      --surface: #ffffff;
+      --surface-strong: #eef4f7;
+      --border: #d7dde5;
+      --text: #17202a;
+      --muted: #5f6f80;
+      --primary: #0f766e;
+      --primary-strong: #0b5f59;
+      --warning-bg: #fff4d8;
+      --warning-border: #e7bc58;
+      --shadow: 0 14px 36px rgba(16, 24, 40, 0.08);
+      --radius: 8px;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    textarea {
+      font: inherit;
+    }
+
+    .app {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-height: 100vh;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 16px;
+      min-height: 64px;
+      padding: 14px clamp(16px, 3vw, 32px);
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      min-width: 72px;
+      height: 36px;
+      padding: 0 10px;
+      border: 1px solid #8dd4cb;
+      border-radius: var(--radius);
+      background: #dff7f2;
+      color: var(--primary-strong);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0;
+      min-width: 0;
+      font-size: clamp(18px, 2vw, 24px);
+      line-height: 1.2;
+      letter-spacing: 0;
+      white-space: nowrap;
+    }
+
+    .material-symbols-outlined {
+      font-family: "Material Symbols Outlined";
+      font-weight: normal;
+      font-style: normal;
+      font-size: 24px;
+      line-height: 1;
+      letter-spacing: normal;
+      text-transform: none;
+      display: inline-block;
+      white-space: nowrap;
+      word-wrap: normal;
+      direction: ltr;
+      -webkit-font-feature-settings: "liga";
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "liga";
+    }
+
+    .title-arrow {
+      color: #000000;
+    }
+
+    main {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 16px;
+      min-width: 0;
+      min-height: 0;
+      padding: 16px clamp(16px, 3vw, 32px);
+    }
+
+    .pane {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      min-width: 0;
+      min-height: min(76vh, 860px);
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      box-shadow: var(--shadow);
+    }
+
+    .pane-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-strong);
+    }
+
+    .pane-title {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 0;
+    }
+
+    .pane-actions {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .icon-button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-width: 82px;
+      height: 32px;
+      padding: 0 10px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 600;
+      transition:
+        border-color 120ms ease,
+        background 120ms ease,
+        color 120ms ease,
+        transform 120ms ease;
+    }
+
+    .icon-button:hover {
+      border-color: var(--primary);
+      background: #eefaf8;
+      color: var(--primary-strong);
+    }
+
+    .icon-button:active {
+      transform: translateY(1px);
+    }
+
+    .icon-button .material-symbols-outlined {
+      font-size: 20px;
+    }
+
+    .editor-shell {
+      position: relative;
+      min-height: 0;
+      overflow: hidden;
+      background: #ffffff;
+    }
+
+    .editor-shell.output-shell {
+      background: var(--surface);
+    }
+
+    .sql-highlight,
+    .editor-shell textarea {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      min-width: 0;
+      height: 100%;
+      margin: 0;
+      padding: 16px;
+      border: 0;
+      outline: 0;
+      font-family:
+        "SFMono-Regular",
+        Consolas,
+        "Liberation Mono",
+        Menlo,
+        monospace;
+      font-size: 14px;
+      line-height: 1.55;
+      tab-size: 2;
+      white-space: pre-wrap;
+      overflow: auto;
+      word-break: break-word;
+    }
+
+    .sql-highlight {
+      color: var(--text);
+      pointer-events: none;
+      user-select: none;
+    }
+
+    .input-shell .sql-highlight {
+      scrollbar-width: none;
+    }
+
+    .input-shell .sql-highlight::-webkit-scrollbar {
+      display: none;
+    }
+
+    .editor-shell textarea {
+      resize: none;
+      background: transparent;
+      color: transparent;
+      caret-color: var(--text);
+      -webkit-text-fill-color: transparent;
+    }
+
+    .editor-shell textarea::selection {
+      background: rgba(15, 118, 110, 0.22);
+      -webkit-text-fill-color: transparent;
+    }
+
+    .output-shell .sql-highlight {
+      color: var(--text);
+      pointer-events: auto;
+      user-select: text;
+    }
+
+    #postgresSql {
+      display: none;
+    }
+
+    .tok-keyword {
+      color: #075985;
+      font-weight: 700;
+    }
+
+    .tok-function {
+      color: #7c3aed;
+    }
+
+    .tok-type {
+      color: #b45309;
+      font-weight: 700;
+    }
+
+    .tok-string {
+      color: #047857;
+    }
+
+    .tok-number {
+      color: #b91c1c;
+    }
+
+    .tok-comment {
+      color: #64748b;
+      font-style: italic;
+    }
+
+    .tok-operator {
+      color: #475569;
+    }
+
+    .pane-footer {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      min-height: 42px;
+      padding: 9px 14px;
+      border-top: 1px solid var(--border);
+      background: #fbfcfe;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .checks {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    .dot {
+      flex: 0 0 auto;
+      width: 9px;
+      height: 9px;
+      border-radius: 999px;
+      background: var(--primary);
+    }
+
+    .status-text {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .drawer {
+      padding: 0 clamp(16px, 3vw, 32px) 18px;
+    }
+
+    .drawer[hidden] {
+      display: none;
+    }
+
+    .warnings {
+      min-height: 66px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--surface);
+      padding: 12px 14px;
+    }
+
+    .warnings {
+      border-color: var(--warning-border);
+      background: var(--warning-bg);
+      color: #614500;
+      font-size: 13px;
+    }
+
+    .warnings strong {
+      display: block;
+      margin-bottom: 6px;
+      color: #4d3700;
+      font-size: 13px;
+    }
+
+    .warnings ul {
+      max-height: 112px;
+      margin: 0;
+      padding-left: 18px;
+      overflow: auto;
+    }
+
+    .warnings li + li {
+      margin-top: 4px;
+    }
+
+    .toast {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      z-index: 20;
+      max-width: min(360px, calc(100vw - 36px));
+      padding: 12px 14px;
+      border: 1px solid #9bd0c9;
+      border-radius: var(--radius);
+      background: #ecfbf8;
+      color: #124d47;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(10px);
+      transition:
+        opacity 160ms ease,
+        transform 160ms ease;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    @media (max-width: 980px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      main {
+        grid-template-columns: 1fr;
+      }
+
+      .pane {
+        min-height: 46vh;
+      }
+    }
+
+    @media (max-width: 560px) {
+      h1 {
+        white-space: normal;
+      }
+
+      .topbar,
+      main,
+      .drawer {
+        padding-left: 12px;
+        padding-right: 12px;
+      }
+
+      .pane-header,
+      .pane-footer {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark" aria-hidden="true">SQL変換</div>
+        <h1>
+          <span>Oracle</span>
+          <span class="material-symbols-outlined title-arrow" aria-hidden="true">arrow_forward</span>
+          <span>PostgreSQL</span>
+        </h1>
+      </div>
+    </header>
+
+    <main>
+      <section class="pane" aria-labelledby="oracleTitle">
+        <div class="pane-header">
+          <h2 class="pane-title" id="oracleTitle">Oracle</h2>
+          <div class="pane-actions">
+            <button class="icon-button" id="clearOracleButton" type="button" title="Oracleをクリア" aria-label="Oracleをクリア">
+              <span class="material-symbols-outlined" aria-hidden="true">backspace</span>
+              <span>クリア</span>
+            </button>
+          </div>
+        </div>
+        <div class="editor-shell input-shell">
+          <pre class="sql-highlight" id="oracleHighlight" aria-hidden="true"></pre>
+          <textarea id="oracleSql" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Oracle SQL"></textarea>
+        </div>
+        <div class="pane-footer">
+          <div class="checks">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="status-text" id="inputStatus">入力待ち</span>
+          </div>
+          <span>Oracle</span>
+        </div>
+      </section>
+
+      <section class="pane" aria-labelledby="postgresTitle">
+        <div class="pane-header">
+          <h2 class="pane-title" id="postgresTitle">PostgreSQL</h2>
+          <div class="pane-actions">
+            <button class="icon-button" id="copyPostgresButton" type="button" title="PostgreSQLをコピー" aria-label="PostgreSQLをコピー">
+              <span class="material-symbols-outlined" aria-hidden="true">content_copy</span>
+              <span>コピー</span>
+            </button>
+          </div>
+        </div>
+        <div class="editor-shell output-shell">
+          <pre class="sql-highlight" id="postgresHighlight" aria-label="PostgreSQL"></pre>
+          <textarea id="postgresSql" readonly spellcheck="false" tabindex="-1" aria-hidden="true"></textarea>
+        </div>
+        <div class="pane-footer">
+          <div class="checks">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="status-text" id="outputStatus">未変換</span>
+          </div>
+          <span>PostgreSQL</span>
+        </div>
+      </section>
+    </main>
+
+    <aside class="drawer" id="messagesDrawer" aria-label="変換情報" hidden>
+      <div class="warnings" id="warningsBox">
+        <strong id="messagesTitle">警告 / エラー</strong>
+        <ul id="warningsList"></ul>
+      </div>
+    </aside>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script>
+    const oracleSql = document.getElementById("oracleSql");
+    const oracleHighlight = document.getElementById("oracleHighlight");
+    const postgresSql = document.getElementById("postgresSql");
+    const postgresHighlight = document.getElementById("postgresHighlight");
+    const clearOracleButton = document.getElementById("clearOracleButton");
+    const copyPostgresButton = document.getElementById("copyPostgresButton");
+    const inputStatus = document.getElementById("inputStatus");
+    const outputStatus = document.getElementById("outputStatus");
+    const messagesDrawer = document.getElementById("messagesDrawer");
+    const messagesTitle = document.getElementById("messagesTitle");
+    const warningsList = document.getElementById("warningsList");
+    const toast = document.getElementById("toast");
+    const highlightTokenizeLimit = 120000;
+
+    const simpleReplacements = [
+      [/\bVARCHAR2\s*\(/gi, "VARCHAR("],
+      [/\bNVARCHAR2\s*\(/gi, "VARCHAR("],
+      [/\bNCHAR\s*\(/gi, "CHAR("],
+      [/\bNUMBER\s*\(\s*(\d+)\s*,\s*0\s*\)/gi, "NUMERIC($1,0)"],
+      [/\bNUMBER\s*\(\s*(\d+)\s*,\s*(\d+)\s*\)/gi, "NUMERIC($1,$2)"],
+      [/\bNUMBER\s*\(\s*(\d+)\s*\)/gi, "NUMERIC($1)"],
+      [/\bNUMBER\b/gi, "NUMERIC"],
+      [/\bBINARY_FLOAT\b/gi, "REAL"],
+      [/\bBINARY_DOUBLE\b/gi, "DOUBLE PRECISION"],
+      [/\bFLOAT\b/gi, "DOUBLE PRECISION"],
+      [/\bDATE\b/gi, "TIMESTAMP"],
+      [/\bCLOB\b/gi, "TEXT"],
+      [/\bNCLOB\b/gi, "TEXT"],
+      [/\bBLOB\b/gi, "BYTEA"],
+      [/\bRAW\s*\(\s*\d+\s*\)/gi, "BYTEA"],
+      [/\bLONG\s+RAW\b/gi, "BYTEA"],
+      [/\bLONG\b/gi, "TEXT"],
+      [/\bMINUS\b/gi, "EXCEPT"],
+      [/\bSOUNDEX\s*\(/gi, "SOUNDEX("],
+      [/\bEMPTY_CLOB\s*\(\s*\)/gi, "''"],
+      [/\bEMPTY_BLOB\s*\(\s*\)/gi, "decode('', 'hex')"],
+      [/\bCURRENT_DATE\b/gi, "CURRENT_DATE"],
+      [/\bENABLE\b/gi, ""],
+      [/\bDISABLE\b/gi, ""],
+      [/\bNOCACHE\b/gi, ""],
+      [/\bCACHE\s+\d+\b/gi, ""],
+      [/\bNOORDER\b/gi, ""],
+      [/\bORDER\b(?!\s+BY)/gi, ""],
+      [/\bNOCYCLE\b/gi, ""],
+      [/\bCYCLE\b/gi, "CYCLE"],
+      [/\bBYTE\b/gi, ""],
+      [/\bCHAR\s+SEMANTICS\b/gi, ""]
+    ];
+
+    const sqlKeywords = new Set([
+      "ADD", "ALTER", "AND", "AS", "ASC", "BEGIN", "BETWEEN", "BY", "CASE", "CHECK",
+      "COLUMN", "COMMENT", "COMMIT", "CONSTRAINT", "CREATE", "CROSS", "DEFAULT", "DELETE",
+      "DESC", "DISTINCT", "DROP", "ELSE", "END", "EXCEPT", "EXISTS", "FETCH", "FOR",
+      "FOREIGN", "FROM", "FULL", "GROUP", "HAVING", "IN", "INCREMENT", "INNER", "INSERT",
+      "INTERSECT", "INTO", "IS", "JOIN", "KEY", "LEFT", "LIKE", "LIMIT", "MATCHED",
+      "MERGE", "NOT", "NULL", "OFFSET", "ON", "OR", "ORDER", "OUTER", "OVER", "PRIMARY",
+      "REFERENCES", "RETURNING", "RIGHT", "ROLLBACK", "SELECT", "SET", "START", "THEN",
+      "UNION", "UNIQUE", "UPDATE", "USING", "VALUES", "WHEN", "WHERE", "WITH"
+    ]);
+
+    const sqlFunctions = new Set([
+      "ADD_MONTHS", "AGE", "COALESCE", "CURRVAL", "DATE_TRUNC", "DECODE", "EXTRACT",
+      "INSTR", "LAST_DAY", "LPAD", "MONTHS_BETWEEN", "NEXTVAL", "NVL", "NVL2",
+      "POSITION", "SUBSTR", "SUBSTRB", "SUBSTRING", "SYSDATE", "SYSTIMESTAMP",
+      "TO_CHAR", "TO_DATE", "TO_NUMBER", "TRUNC"
+    ]);
+
+    const sqlTypes = new Set([
+      "BIGINT", "BINARY_DOUBLE", "BINARY_FLOAT", "BLOB", "BOOLEAN", "BYTEA", "CHAR",
+      "CLOB", "DATE", "DOUBLE", "INTEGER", "NCLOB", "NCHAR", "NUMBER", "NUMERIC",
+      "PRECISION", "RAW", "REAL", "TEXT", "TIMESTAMP", "VARCHAR", "VARCHAR2"
+    ]);
+
+    function updateMeta() {
+      inputStatus.textContent = oracleSql.value.trim() ? "入力あり" : "入力待ち";
+      outputStatus.textContent = postgresSql.value.trim() ? "変換済み" : "未変換";
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    function wrapToken(value, className) {
+      return `<span class="${className}">${escapeHtml(value)}</span>`;
+    }
+
+    function classForWord(word) {
+      const upper = word.toUpperCase();
+      if (sqlKeywords.has(upper)) {
+        return "tok-keyword";
+      }
+      if (sqlFunctions.has(upper)) {
+        return "tok-function";
+      }
+      if (sqlTypes.has(upper)) {
+        return "tok-type";
+      }
+      return "";
+    }
+
+    function readQuoted(sql, start, quote) {
+      let index = start + 1;
+      while (index < sql.length) {
+        if (sql[index] === quote) {
+          if (sql[index + 1] === quote) {
+            index += 2;
+          } else {
+            return index + 1;
+          }
+        } else {
+          index += 1;
+        }
+      }
+      return sql.length;
+    }
+
+    function readOracleQuotedLiteral(sql, start) {
+      if (sql.slice(start, start + 2).toLowerCase() !== "q'") {
+        return 0;
+      }
+
+      const opener = sql[start + 2];
+      if (!opener) {
+        return sql.length;
+      }
+
+      const pairs = {
+        "[": "]",
+        "(": ")",
+        "{": "}",
+        "<": ">"
+      };
+      const closer = pairs[opener] || opener;
+      const terminator = `${closer}'`;
+      const end = sql.indexOf(terminator, start + 3);
+      return end === -1 ? sql.length : end + terminator.length;
+    }
+
+    function getSqlProtectedRanges(sql) {
+      const ranges = [];
+      let index = 0;
+
+      while (index < sql.length) {
+        const rest = sql.slice(index);
+        const char = sql[index];
+
+        if (rest.startsWith("--")) {
+          const end = sql.indexOf("\n", index);
+          const next = end === -1 ? sql.length : end;
+          ranges.push({ start: index, end: next });
+          index = next;
+          continue;
+        }
+
+        if (rest.startsWith("/*")) {
+          const end = sql.indexOf("*/", index + 2);
+          const next = end === -1 ? sql.length : end + 2;
+          ranges.push({ start: index, end: next });
+          index = next;
+          continue;
+        }
+
+        const oracleQuotedEnd = readOracleQuotedLiteral(sql, index);
+        if (oracleQuotedEnd) {
+          ranges.push({ start: index, end: oracleQuotedEnd });
+          index = oracleQuotedEnd;
+          continue;
+        }
+
+        const dollarTag = rest.match(/^\$[A-Za-z_][\w$]*\$|^\$\$/);
+        if (dollarTag) {
+          const tag = dollarTag[0];
+          const end = sql.indexOf(tag, index + tag.length);
+          const next = end === -1 ? sql.length : end + tag.length;
+          ranges.push({ start: index, end: next });
+          index = next;
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          const next = readQuoted(sql, index, char);
+          ranges.push({ start: index, end: next });
+          index = next;
+          continue;
+        }
+
+        index += 1;
+      }
+
+      return ranges;
+    }
+
+    function isProtectedIndex(ranges, index) {
+      return ranges.some((range) => index >= range.start && index < range.end);
+    }
+
+    function expandReplacement(match, captures, replacement) {
+      return replacement.replace(/\$\$|\$&|\$(\d{1,2})/g, (token, indexText) => {
+        if (token === "$$") {
+          return "$";
+        }
+        if (token === "$&") {
+          return match;
+        }
+        return captures[Number(indexText) - 1] || "";
+      });
+    }
+
+    function replaceOutsideSqlLiterals(sql, pattern, replacement) {
+      const ranges = getSqlProtectedRanges(sql);
+      const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+      const globalPattern = new RegExp(pattern.source, flags);
+      return sql.replace(globalPattern, (...args) => {
+        const match = args[0];
+        const offset = args[args.length - 2];
+        if (isProtectedIndex(ranges, offset)) {
+          return match;
+        }
+        if (typeof replacement === "function") {
+          return replacement(...args);
+        }
+        return expandReplacement(match, args.slice(1, -2), replacement);
+      });
+    }
+
+    function matchesOutsideSqlLiterals(sql, pattern) {
+      const ranges = getSqlProtectedRanges(sql);
+      const flags = pattern.flags.includes("g") ? pattern.flags : `${pattern.flags}g`;
+      const globalPattern = new RegExp(pattern.source, flags);
+      let match;
+
+      while ((match = globalPattern.exec(sql)) !== null) {
+        if (!isProtectedIndex(ranges, match.index)) {
+          return true;
+        }
+        if (!match[0]) {
+          globalPattern.lastIndex += 1;
+        }
+      }
+
+      return false;
+    }
+
+    function highlightSql(sql) {
+      let html = "";
+      let index = 0;
+
+      while (index < sql.length) {
+        const rest = sql.slice(index);
+        const char = sql[index];
+
+        if (rest.startsWith("--")) {
+          const end = sql.indexOf("\n", index);
+          const next = end === -1 ? sql.length : end;
+          html += wrapToken(sql.slice(index, next), "tok-comment");
+          index = next;
+          continue;
+        }
+
+        if (rest.startsWith("/*")) {
+          const end = sql.indexOf("*/", index + 2);
+          const next = end === -1 ? sql.length : end + 2;
+          html += wrapToken(sql.slice(index, next), "tok-comment");
+          index = next;
+          continue;
+        }
+
+        const oracleQuotedEnd = readOracleQuotedLiteral(sql, index);
+        if (oracleQuotedEnd) {
+          html += wrapToken(sql.slice(index, oracleQuotedEnd), "tok-string");
+          index = oracleQuotedEnd;
+          continue;
+        }
+
+        const dollarTag = rest.match(/^\$[A-Za-z_][\w$]*\$|^\$\$/);
+        if (dollarTag) {
+          const tag = dollarTag[0];
+          const end = sql.indexOf(tag, index + tag.length);
+          const next = end === -1 ? sql.length : end + tag.length;
+          html += wrapToken(sql.slice(index, next), "tok-string");
+          index = next;
+          continue;
+        }
+
+        if (char === "'") {
+          const next = readQuoted(sql, index, "'");
+          html += wrapToken(sql.slice(index, next), "tok-string");
+          index = next;
+          continue;
+        }
+
+        if (char === '"') {
+          const next = readQuoted(sql, index, '"');
+          html += wrapToken(sql.slice(index, next), "tok-string");
+          index = next;
+          continue;
+        }
+
+        const number = rest.match(/^\b\d+(?:\.\d+)?\b/);
+        if (number) {
+          html += wrapToken(number[0], "tok-number");
+          index += number[0].length;
+          continue;
+        }
+
+        const word = rest.match(/^[A-Za-z_][\w$#]*/);
+        if (word) {
+          const className = classForWord(word[0]);
+          html += className ? wrapToken(word[0], className) : escapeHtml(word[0]);
+          index += word[0].length;
+          continue;
+        }
+
+        if (/[<>=!|&+\-*\/%,.;:()[\]]/.test(char)) {
+          html += wrapToken(char, "tok-operator");
+          index += 1;
+          continue;
+        }
+
+        html += escapeHtml(char);
+        index += 1;
+      }
+
+      return html;
+    }
+
+    function renderSqlHighlight(element, sql) {
+      if (sql.length > highlightTokenizeLimit) {
+        element.textContent = sql;
+        element.dataset.highlightMode = "plain";
+        return;
+      }
+
+      element.innerHTML = highlightSql(sql);
+      element.dataset.highlightMode = "tokenized";
+    }
+
+    function renderSqlHighlights() {
+      renderSqlHighlight(oracleHighlight, oracleSql.value);
+      renderSqlHighlight(postgresHighlight, postgresSql.value);
+    }
+
+    function syncOracleHighlightScroll() {
+      oracleHighlight.scrollTop = oracleSql.scrollTop;
+      oracleHighlight.scrollLeft = oracleSql.scrollLeft;
+    }
+
+    function showToast(message) {
+      toast.textContent = message;
+      toast.classList.add("show");
+      window.clearTimeout(showToast.timer);
+      showToast.timer = window.setTimeout(() => {
+        toast.classList.remove("show");
+      }, 1800);
+    }
+
+    function splitArgs(text) {
+      const args = [];
+      let current = "";
+      let depth = 0;
+      let quote = "";
+
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (quote) {
+          current += char;
+          if (char === quote) {
+            if (next === quote) {
+              current += next;
+              i += 1;
+            } else {
+              quote = "";
+            }
+          }
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          quote = char;
+          current += char;
+          continue;
+        }
+
+        if (char === "(") {
+          depth += 1;
+          current += char;
+          continue;
+        }
+
+        if (char === ")") {
+          depth = Math.max(0, depth - 1);
+          current += char;
+          continue;
+        }
+
+        if (char === "," && depth === 0) {
+          args.push(current.trim());
+          current = "";
+          continue;
+        }
+
+        current += char;
+      }
+
+      if (current.trim() || text.trim()) {
+        args.push(current.trim());
+      }
+
+      return args;
+    }
+
+    function findClosingParen(text, openIndex) {
+      let depth = 0;
+      let quote = "";
+
+      for (let i = openIndex; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (quote) {
+          if (char === quote) {
+            if (next === quote) {
+              i += 1;
+            } else {
+              quote = "";
+            }
+          }
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          quote = char;
+          continue;
+        }
+
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === ")") {
+          depth -= 1;
+          if (depth === 0) {
+            return i;
+          }
+        }
+      }
+
+      return -1;
+    }
+
+    function escapeRegExp(value) {
+      return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function lineIndentBefore(text, index = text.length) {
+      const lineStart = text.lastIndexOf("\n", index - 1) + 1;
+      const linePrefix = text.slice(lineStart, index);
+      const match = linePrefix.match(/^[ \t]*/);
+      return match ? match[0] : "";
+    }
+
+    function nestedIndentFromArgs(argsText, fallbackIndent) {
+      const match = argsText.match(/\n([ \t]*)\S/);
+      return match ? match[1] : `${fallbackIndent}  `;
+    }
+
+    function splitSqlStatements(sql) {
+      const statements = [];
+      let start = 0;
+      let quote = "";
+
+      for (let i = 0; i < sql.length; i += 1) {
+        const char = sql[i];
+        const next = sql[i + 1];
+
+        if (quote) {
+          if (char === quote) {
+            if (next === quote) {
+              i += 1;
+            } else {
+              quote = "";
+            }
+          }
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          quote = char;
+          continue;
+        }
+
+        if (char === ";") {
+          statements.push(sql.slice(start, i + 1));
+          start = i + 1;
+        }
+      }
+
+      if (start < sql.length) {
+        statements.push(sql.slice(start));
+      }
+
+      return statements;
+    }
+
+    function splitTopLevelUnionAll(text) {
+      const parts = [];
+      let start = 0;
+      let depth = 0;
+      let quote = "";
+
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (quote) {
+          if (char === quote) {
+            if (next === quote) {
+              i += 1;
+            } else {
+              quote = "";
+            }
+          }
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          quote = char;
+          continue;
+        }
+
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === ")") {
+          depth = Math.max(0, depth - 1);
+          continue;
+        }
+
+        if (depth === 0) {
+          const match = text.slice(i).match(/^UNION\s+ALL\b/i);
+          const previous = i > 0 ? text[i - 1] : "";
+          if (match && !/[\w$#]/.test(previous)) {
+            parts.push(text.slice(start, i).trim());
+            i += match[0].length - 1;
+            start = i + 1;
+          }
+        }
+      }
+
+      parts.push(text.slice(start).trim());
+      return parts.filter(Boolean);
+    }
+
+    function findTopLevelFromDual(text) {
+      let depth = 0;
+      let quote = "";
+
+      for (let i = 0; i < text.length; i += 1) {
+        const char = text[i];
+        const next = text[i + 1];
+
+        if (quote) {
+          if (char === quote) {
+            if (next === quote) {
+              i += 1;
+            } else {
+              quote = "";
+            }
+          }
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          quote = char;
+          continue;
+        }
+
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === ")") {
+          depth = Math.max(0, depth - 1);
+          continue;
+        }
+
+        if (depth === 0) {
+          const match = text.slice(i).match(/^FROM\s+(?:SYS\.)?(?:DUAL|DUEL)\b/i);
+          const previous = i > 0 ? text[i - 1] : "";
+          if (match && !/[\w$#]/.test(previous)) {
+            return {
+              index: i,
+              end: i + match[0].length
+            };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function stripIdentifierQuotes(identifier) {
+      return identifier.replace(/^"|"$/g, "");
+    }
+
+    function parseSelectItem(item, index, warnings) {
+      const trimmed = item.trim();
+      const withAs = trimmed.match(/^([\s\S]+?)\s+AS\s+("[^"]+"|[A-Za-z_][\w$#]*)$/i);
+      if (withAs) {
+        return {
+          value: withAs[1].trim(),
+          alias: withAs[2].trim()
+        };
+      }
+
+      const withImplicitAlias = trimmed.match(/^([\s\S]+?)\s+("[^"]+"|[A-Za-z_][\w$#]*)$/);
+      if (withImplicitAlias && !/[.)\]'"`]/.test(withImplicitAlias[2][0])) {
+        return {
+          value: withImplicitAlias[1].trim(),
+          alias: withImplicitAlias[2].trim()
+        };
+      }
+
+      warnings.push(`MERGE USING SELECT の ${index + 1} 番目の列に別名がないため col${index + 1} を付与しました。`);
+      return {
+        value: trimmed,
+        alias: `col${index + 1}`
+      };
+    }
+
+    function parseDualSelectValues(innerSql, warnings) {
+      const rows = [];
+      let columns = [];
+      const selectBlocks = splitTopLevelUnionAll(innerSql.trim().replace(/;$/, ""));
+
+      for (let rowIndex = 0; rowIndex < selectBlocks.length; rowIndex += 1) {
+        const block = selectBlocks[rowIndex].trim();
+        const selectMatch = block.match(/^SELECT\s+([\s\S]+)$/i);
+        if (!selectMatch) {
+          return null;
+        }
+
+        const afterSelect = selectMatch[1].trim();
+        const fromDual = findTopLevelFromDual(afterSelect);
+        if (!fromDual) {
+          return null;
+        }
+
+        const tail = afterSelect.slice(fromDual.end).trim();
+        if (tail) {
+          warnings.push("MERGE USING SELECT に FROM DUAL 以外の句があるため、該当箇所は手動確認してください。");
+          return null;
+        }
+
+        const items = splitArgs(afterSelect.slice(0, fromDual.index));
+        if (!items.length) {
+          return null;
+        }
+
+        const parsedItems = items.map((item, itemIndex) => parseSelectItem(item, itemIndex, warnings));
+        if (rowIndex === 0) {
+          columns = parsedItems.map((item) => item.alias);
+        } else if (parsedItems.length !== columns.length) {
+          warnings.push("MERGE USING SELECT の UNION ALL 行で列数が一致しません。");
+          return null;
+        }
+
+        rows.push(parsedItems.map((item) => item.value));
+      }
+
+      return {
+        columns,
+        rows
+      };
+    }
+
+    function readOptionalAlias(text, index) {
+      const match = text.slice(index).match(/^\s+(?:AS\s+)?("[^"]+"|[A-Za-z_][\w$#]*)/i);
+      if (!match) {
+        return {
+          alias: "src",
+          end: index,
+          generated: true
+        };
+      }
+
+      const alias = match[1];
+      if (/^(ON|WHEN|WHERE|JOIN|USING)$/i.test(alias)) {
+        return {
+          alias: "src",
+          end: index,
+          generated: true
+        };
+      }
+
+      return {
+        alias,
+        end: index + match[0].length,
+        generated: false
+      };
+    }
+
+    function isMergeUsingContext(sql, usingIndex) {
+      const statementStart = Math.max(sql.lastIndexOf(";", usingIndex) + 1, 0);
+      return /\bMERGE\s+INTO\b/i.test(sql.slice(statementStart, usingIndex));
+    }
+
+    function replaceFunctionCalls(sql, functionName, replacer, warnings = []) {
+      const lower = sql.toLowerCase();
+      const name = functionName.toLowerCase();
+      const ranges = getSqlProtectedRanges(sql);
+      let index = 0;
+      let output = "";
+
+      while (index < sql.length) {
+        const found = lower.indexOf(name, index);
+        if (found === -1) {
+          output += sql.slice(index);
+          break;
+        }
+
+        const before = found > 0 ? sql[found - 1] : "";
+        const afterNameIndex = found + name.length;
+        const after = sql[afterNameIndex] || "";
+
+        if (isProtectedIndex(ranges, found)) {
+          output += sql.slice(index, afterNameIndex);
+          index = afterNameIndex;
+          continue;
+        }
+
+        if (/[\w$#]/.test(before) || /\w/.test(after)) {
+          output += sql.slice(index, afterNameIndex);
+          index = afterNameIndex;
+          continue;
+        }
+
+        let cursor = afterNameIndex;
+        while (/\s/.test(sql[cursor] || "")) {
+          cursor += 1;
+        }
+
+        if (sql[cursor] !== "(") {
+          output += sql.slice(index, afterNameIndex);
+          index = afterNameIndex;
+          continue;
+        }
+
+        const close = findClosingParen(sql, cursor);
+        if (close === -1) {
+          output += sql.slice(index);
+          break;
+        }
+
+        const argsText = sql.slice(cursor + 1, close);
+        const args = splitArgs(argsText);
+        output += sql.slice(index, found) + replacer(args, argsText, {
+          callText: sql.slice(found, close + 1),
+          functionName,
+          hasMultilineArgs: argsText.includes("\n"),
+          indent: lineIndentBefore(sql, found),
+          warnings
+        });
+        index = close + 1;
+      }
+
+      return output;
+    }
+
+    function formatCall(name, args, argsText, context = {}) {
+      if (context.hasMultilineArgs) {
+        const indent = context.indent || "";
+        const innerIndent = nestedIndentFromArgs(argsText, indent);
+        return `${name}(\n${args.map((arg) => `${innerIndent}${arg}`).join(",\n")}\n${indent})`;
+      }
+      return `${name}(${args.join(", ")})`;
+    }
+
+    function unquoteSqlLiteral(value) {
+      const trimmed = value.trim();
+      if (!/^'(?:''|[^'])*'$/.test(trimmed)) {
+        return "";
+      }
+      return trimmed.slice(1, -1).replace(/''/g, "'");
+    }
+
+    function isNumericLiteral(value) {
+      return /^[+-]?\d+(?:\.\d+)?$/.test(value.trim());
+    }
+
+    function isIntegerLiteral(value) {
+      return /^[+-]?\d+$/.test(value.trim());
+    }
+
+    function isNegativeIntegerLiteral(value) {
+      return /^-\d+$/.test(value.trim());
+    }
+
+    function isNumericLikeExpression(expression) {
+      const normalized = expression.trim();
+      return isNumericLiteral(normalized)
+        || /^(COUNT|SUM|AVG|MIN|MAX|TO_NUMBER|TRUNC|ROUND)\s*\(/i.test(normalized)
+        || /\b(amount|amt|price|qty|quantity|count|cnt|num|number|total|sum|rate|score|id)\b/i.test(normalized);
+    }
+
+    function defaultNumberFormat(argument) {
+      const literal = unquoteSqlLiteral(argument);
+      const sample = literal || argument.trim();
+      const numeric = sample.match(/^[+-]?(\d+)(?:\.(\d+))?$/);
+      if (!numeric) {
+        return "'999999999'";
+      }
+      const integerDigits = Math.max(1, numeric[1].length);
+      const decimalDigits = numeric[2]?.length || 0;
+      return decimalDigits
+        ? `'${"9".repeat(integerDigits)}.${"9".repeat(decimalDigits)}'`
+        : `'${"9".repeat(integerDigits)}'`;
+    }
+
+    function defaultDateFormat(argument) {
+      const literal = unquoteSqlLiteral(argument);
+      if (/^\d{8}$/.test(literal)) {
+        return "'YYYYMMDD'";
+      }
+      if (/^\d{4}\/\d{2}\/\d{2}$/.test(literal)) {
+        return "'YYYY/MM/DD'";
+      }
+      if (/^\d{4}-\d{2}-\d{2}$/.test(literal)) {
+        return "'YYYY-MM-DD'";
+      }
+      return "'YYYYMMDD'";
+    }
+
+    function convertNvl(args, argsText, context = {}) {
+      if (args.length !== 2) {
+        return formatCall("COALESCE", args.length ? args : [argsText], argsText, context);
+      }
+      return formatCall("COALESCE", args, argsText, context);
+    }
+
+    function convertNvl2(args, argsText, context = {}) {
+      if (args.length !== 3) {
+        return `NVL2(${argsText})`;
+      }
+
+      if (context.hasMultilineArgs) {
+        const indent = context.indent || "";
+        const innerIndent = nestedIndentFromArgs(argsText, indent);
+        return `(CASE\n${innerIndent}WHEN ${args[0]} IS NOT NULL THEN ${args[1]}\n${innerIndent}ELSE ${args[2]}\n${indent}END)`;
+      }
+      return `(CASE WHEN ${args[0]} IS NOT NULL THEN ${args[1]} ELSE ${args[2]} END)`;
+    }
+
+    function convertDecode(args, argsText, context = {}) {
+      if (args.length < 3) {
+        return `DECODE(${argsText})`;
+      }
+
+      const expression = args[0];
+      const parts = [];
+      const hasDefault = args.length % 2 === 0;
+      const limit = hasDefault ? args.length - 1 : args.length;
+
+      for (let i = 1; i < limit; i += 2) {
+        const comparison = /^NULL$/i.test(args[i].trim())
+          ? `${expression} IS NULL`
+          : `${expression} = ${args[i]}`;
+        parts.push(`WHEN ${comparison} THEN ${args[i + 1]}`);
+      }
+
+      if (hasDefault) {
+        parts.push(`ELSE ${args[args.length - 1]}`);
+      }
+
+      if (context.hasMultilineArgs) {
+        const indent = context.indent || "";
+        const innerIndent = nestedIndentFromArgs(argsText, indent);
+        return `(CASE\n${parts.map((part) => `${innerIndent}${part}`).join("\n")}\n${indent}END)`;
+      }
+
+      return `(CASE ${parts.join(" ")} END)`;
+    }
+
+    function convertAddMonths(args, argsText, context = {}) {
+      if (args.length !== 2) {
+        return `ADD_MONTHS(${argsText})`;
+      }
+      context.warnings?.push("ADD_MONTHS は月末計算でOracleと差が出るため、PostgreSQL側の add_months 関数定義を確認してください。");
+      return formatCall("add_months", args, argsText, context);
+    }
+
+    function convertMonthsBetween(args, argsText, context = {}) {
+      if (args.length !== 2) {
+        return `MONTHS_BETWEEN(${argsText})`;
+      }
+      context.warnings?.push("MONTHS_BETWEEN はOracleの月末/小数月セマンティクスと差が出やすいため、自動近似せず手動確認してください。");
+      return `MONTHS_BETWEEN(${argsText})`;
+    }
+
+    function dateTruncUnit(unitArg) {
+      const unit = unitArg.trim().replace(/^['"]|['"]$/g, "").toUpperCase();
+      const unitMap = {
+        DD: "day",
+        D: "day",
+        DAY: "day",
+        MM: "month",
+        MON: "month",
+        MONTH: "month",
+        Q: "quarter",
+        YYYY: "year",
+        YY: "year",
+        YEAR: "year",
+        HH: "hour",
+        HH24: "hour",
+        MI: "minute"
+      };
+      return unitMap[unit] || "";
+    }
+
+    function isQuotedSqlLiteral(value) {
+      return /^['"]/.test(value.trim());
+    }
+
+    function isDateLikeTruncExpression(expression) {
+      const normalized = expression.trim();
+      return /^(CURRENT_DATE|CURRENT_TIMESTAMP|LOCALTIMESTAMP|LOCALTIME)\b/i.test(normalized)
+        || /^(TO_DATE|TO_TIMESTAMP)\s*\(/i.test(normalized)
+        || /^(DATE|TIMESTAMP)\s*'/i.test(normalized)
+        || /\b(date|time|timestamp|created_at|updated_at|deleted_at|published_at)\b/i.test(normalized);
+    }
+
+    function formatDateTrunc(argument, unit, argsText, context = {}) {
+      let call;
+      if (context.hasMultilineArgs) {
+        const indent = context.indent || "";
+        const innerIndent = nestedIndentFromArgs(argsText, indent);
+        call = `date_trunc(\n${innerIndent}'${unit}',\n${innerIndent}${argument}\n${indent})`;
+      } else {
+        call = `date_trunc('${unit}', ${argument})`;
+      }
+      return `(${call})::date`;
+    }
+
+    function convertInstr(args, argsText, context = {}) {
+      if (args.length === 2) {
+        if (context.hasMultilineArgs) {
+          const indent = context.indent || "";
+          const innerIndent = nestedIndentFromArgs(argsText, indent);
+          return `POSITION(\n${innerIndent}${args[1]}\n${innerIndent}IN ${args[0]}\n${indent})`;
+        }
+        return `POSITION(${args[1]} IN ${args[0]})`;
+      }
+      context.warnings?.push("INSTR の第3・第4引数はPostgreSQL標準関数で表現できないため、instr 関数定義を確認してください。");
+      return formatCall("instr", args.length ? args : [argsText], argsText, context);
+    }
+
+    function convertTrunc(args, argsText, context = {}) {
+      if (args.length === 1) {
+        if (isDateLikeTruncExpression(args[0])) {
+          return formatDateTrunc(args[0], "day", argsText, context);
+        }
+        return `trunc(${args[0]})`;
+      }
+
+      if (args.length === 2) {
+        const unit = isQuotedSqlLiteral(args[1]) ? dateTruncUnit(args[1]) : "";
+        if (unit) {
+          return formatDateTrunc(args[0], unit, argsText, context);
+        }
+        if (!isQuotedSqlLiteral(args[1])) {
+          return `trunc(${args[0]}, ${args[1]})`;
+        }
+        context.warnings?.push("TRUNC の日付書式をPostgreSQL date_truncへ対応できないため、該当箇所は手動確認してください。");
+      }
+
+      return `TRUNC(${argsText})`;
+    }
+
+    function convertToChar(args, argsText, context = {}) {
+      if (args.length >= 2 && /'[A-Z0-9:/._ -]+'/i.test(args[1])) {
+        if (context.hasMultilineArgs) {
+          const indent = context.indent || "";
+          const innerIndent = nestedIndentFromArgs(argsText, indent);
+          return `to_char(\n${innerIndent}${args[0]},\n${innerIndent}${normalizeDateFormat(args[1])}\n${indent})`;
+        }
+        return `to_char(${args[0]}, ${normalizeDateFormat(args[1])})`;
+      }
+      if (args.length === 1) {
+        let format = "'FM999999999'";
+        if (isDateLikeTruncExpression(args[0])) {
+          format = "'YYYY-MM-DD HH24:MI:SS'";
+        } else if (!isNumericLikeExpression(args[0])) {
+          context.warnings?.push("TO_CHAR の第1引数の型を判定できないため、補完した書式を確認してください。");
+        }
+        return formatCall("to_char", [args[0], format], argsText, context);
+      }
+      return `to_char(${argsText})`;
+    }
+
+    function convertToDate(args, argsText, context = {}) {
+      if (args.length >= 2) {
+        if (context.hasMultilineArgs) {
+          const indent = context.indent || "";
+          const innerIndent = nestedIndentFromArgs(argsText, indent);
+          return `to_date(\n${innerIndent}${args[0]},\n${innerIndent}${normalizeDateFormat(args[1])}\n${indent})`;
+        }
+        return `to_date(${args[0]}, ${normalizeDateFormat(args[1])})`;
+      }
+      if (args.length === 1) {
+        return formatCall("to_date", [args[0], defaultDateFormat(args[0])], argsText, context);
+      }
+      return `to_date(${argsText})`;
+    }
+
+    function normalizeDateFormat(formatLiteral) {
+      return formatLiteral
+        .replace(/RRRR/gi, "YYYY")
+        .replace(/RR/gi, "YY");
+    }
+
+    function convertToNumber(args, argsText, context = {}) {
+      if (args.length >= 2) {
+        return formatCall("to_number", args, argsText, context);
+      }
+      if (args.length !== 1) {
+        return `to_number(${argsText})`;
+      }
+
+      let argument = args[0];
+      if (/^TRIM\s*\(/i.test(argument.trim())) {
+        argument = `NULLIF(${argument}, '')`;
+      }
+      return formatCall("to_number", [argument, defaultNumberFormat(argument)], argsText, context);
+    }
+
+    function convertSubstr(args, argsText, context = {}) {
+      if (args.length < 2) {
+        return `SUBSTR(${argsText})`;
+      }
+
+      const source = args[0];
+      const start = args[1].trim();
+      if (isNegativeIntegerLiteral(start)) {
+        const lengthFromEnd = String(Math.abs(Number(start)));
+        if (args.length === 2) {
+          return formatCall("RIGHT", [source, lengthFromEnd], argsText, context);
+        }
+        if (args.length === 3) {
+          const convertedStart = `char_length(${source}) - ${lengthFromEnd} + 1`;
+          return formatCall("SUBSTRING", [source, convertedStart, args[2]], argsText, context);
+        }
+        context.warnings?.push("SUBSTR の負数開始位置と追加引数の組み合わせは手動確認してください。");
+        return `SUBSTR(${argsText})`;
+      }
+
+      const convertedArgs = [...args];
+      if (/^\+?0$/.test(start)) {
+        convertedArgs[1] = "1";
+      }
+      return formatCall("SUBSTRING", convertedArgs, argsText, context);
+    }
+
+    function convertLpad(args, argsText, context = {}) {
+      if (args.length < 2) {
+        return `LPAD(${argsText})`;
+      }
+
+      const convertedArgs = [...args];
+      if (isNumericLiteral(convertedArgs[0]) || /^(NEXTVAL|CURRVAL|COUNT|SUM|AVG|TO_NUMBER|TRUNC|ROUND)\s*\(/i.test(convertedArgs[0].trim())) {
+        convertedArgs[0] = `CAST(${convertedArgs[0]} AS TEXT)`;
+      }
+      if (convertedArgs[2] && isNumericLiteral(convertedArgs[2])) {
+        convertedArgs[2] = `'${convertedArgs[2].trim()}'`;
+      }
+      return formatCall("LPAD", convertedArgs, argsText, context);
+    }
+
+    function convertLastDay(args, argsText, context = {}) {
+      if (args.length !== 1) {
+        return `LAST_DAY(${argsText})`;
+      }
+      if (context.hasMultilineArgs) {
+        const indent = context.indent || "";
+        const innerIndent = nestedIndentFromArgs(argsText, indent);
+        return `(\n${innerIndent}date_trunc('month', ${args[0]})\n${innerIndent}+ INTERVAL '1 month'\n${innerIndent}- INTERVAL '1 day'\n${indent})::date`;
+      }
+      return `(date_trunc('month', ${args[0]}) + INTERVAL '1 month' - INTERVAL '1 day')::date`;
+    }
+
+    function convertSequences(sql) {
+      return replaceOutsideSqlLiterals(
+        replaceOutsideSqlLiterals(sql, /\b([A-Za-z_][\w$#.]*)\.NEXTVAL\b/gi, (_, name) => `nextval('${name.toLowerCase()}')`),
+        /\b([A-Za-z_][\w$#.]*)\.CURRVAL\b/gi,
+        (_, name) => `currval('${name.toLowerCase()}')`
+      );
+    }
+
+    function convertCurrentDateTimeTokens(sql) {
+      let next = replaceOutsideSqlLiterals(
+        sql,
+        /\bSYSDATE\s*([+-])\s*(\d+(?:\.\d+)?)\b/gi,
+        (_, operator, days) => `LOCALTIMESTAMP ${operator} INTERVAL '${days} day'`
+      );
+      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CURRENT_TIMESTAMP");
+      next = replaceOutsideSqlLiterals(next, /\bSYSDATE\b/gi, "LOCALTIMESTAMP");
+      return next;
+    }
+
+    function normalizeKnownTypos(sql, warnings) {
+      let next = sql;
+      let fixedDual = false;
+      let fixedSelect = false;
+
+      next = replaceOutsideSqlLiterals(next, /\bFROM\s+(SYS\.)?DUEL\b/gi, (_, schema) => {
+        fixedDual = true;
+        return `FROM ${schema || ""}DUAL`;
+      });
+      if (fixedDual) {
+        warnings.push("FROM DUEL を FROM DUAL とみなして変換しました。");
+      }
+
+      next = replaceOutsideSqlLiterals(next, /\bSEALECT\b/gi, () => {
+        fixedSelect = true;
+        return "SELECT";
+      });
+      if (fixedSelect) {
+        warnings.push("SEALECT を SELECT とみなして変換しました。");
+      }
+
+      return next;
+    }
+
+    function convertMergeUsingDual(sql, warnings) {
+      const usingPattern = /\bUSING\s*\(/gi;
+      const ranges = getSqlProtectedRanges(sql);
+      let output = "";
+      let cursor = 0;
+      let match;
+
+      while ((match = usingPattern.exec(sql)) !== null) {
+        const usingIndex = match.index;
+        const openIndex = usingIndex + match[0].lastIndexOf("(");
+
+        if (isProtectedIndex(ranges, usingIndex) || !isMergeUsingContext(sql, usingIndex)) {
+          continue;
+        }
+
+        const closeIndex = findClosingParen(sql, openIndex);
+        if (closeIndex === -1) {
+          warnings.push("MERGE USING の括弧対応を判定できませんでした。");
+          continue;
+        }
+
+        const aliasInfo = readOptionalAlias(sql, closeIndex + 1);
+        const parsed = parseDualSelectValues(sql.slice(openIndex + 1, closeIndex), warnings);
+
+        if (!parsed) {
+          warnings.push("MERGE USING (SELECT ... FROM DUAL) の形ではないため、USING 句は手動確認してください。");
+          usingPattern.lastIndex = closeIndex + 1;
+          continue;
+        }
+
+        if (aliasInfo.generated) {
+          warnings.push("MERGE USING に別名がないため src を付与しました。");
+        }
+
+        const indent = lineIndentBefore(sql, usingIndex);
+        const rowIndent = `${indent}  `;
+        const valuesRows = parsed.rows
+          .map((row) => `${rowIndent}(${row.join(", ")})`)
+          .join(",\n");
+        const replacement = `USING (VALUES\n${valuesRows}\n${indent}) AS ${aliasInfo.alias}(${parsed.columns.join(", ")})`;
+
+        output += sql.slice(cursor, usingIndex) + replacement;
+        cursor = aliasInfo.end;
+        usingPattern.lastIndex = closeIndex + 1;
+      }
+
+      output += sql.slice(cursor);
+      return output;
+    }
+
+    function identifierQualifierPattern(identifier) {
+      const unquoted = stripIdentifierQuotes(identifier.trim());
+      return `"${escapeRegExp(unquoted)}"|${escapeRegExp(unquoted)}`;
+    }
+
+    function tableBaseName(tableName) {
+      return tableName
+        .split(".")
+        .map((part) => part.trim())
+        .filter(Boolean)
+        .pop() || tableName;
+    }
+
+    function removeColumnQualifier(column, qualifiers) {
+      let next = column.trim();
+      qualifiers.forEach((qualifier) => {
+        if (!qualifier) {
+          return;
+        }
+        const pattern = new RegExp(`^(${identifierQualifierPattern(qualifier)})\\s*\\.\\s*`, "i");
+        next = next.replace(pattern, "");
+      });
+      return next;
+    }
+
+    function convertMergeTargetQualifiers(sql) {
+      return splitSqlStatements(sql).map((statement) => {
+        const mergeMatch = statement.match(/\bMERGE\s+INTO\s+((?:"[^"]+"|[A-Za-z_][\w$#]*)(?:\s*\.\s*(?:"[^"]+"|[A-Za-z_][\w$#]*))?)(?:\s+(?:AS\s+)?("[^"]+"|[A-Za-z_][\w$#]*))?\s+USING\b/i);
+        if (!mergeMatch) {
+          return statement;
+        }
+
+        const targetTable = mergeMatch[1];
+        const targetAlias = mergeMatch[2] && !/^(USING|ON|WHEN)$/i.test(mergeMatch[2]) ? mergeMatch[2] : "";
+        const qualifiers = [targetAlias, tableBaseName(targetTable)];
+        let next = statement;
+
+        qualifiers.forEach((qualifier) => {
+          if (!qualifier) {
+            return;
+          }
+          const assignmentPattern = new RegExp(`\\b(${identifierQualifierPattern(qualifier)})\\s*\\.\\s*((?:"[^"]+"|[A-Za-z_][\\w$#]*))\\s*=`, "gi");
+          next = next.replace(/\bUPDATE\s+SET\b([\s\S]*?)(?=\bWHEN\s+NOT\s+MATCHED\b|\bWHEN\s+MATCHED\b|;$|$)/gi, (full, body) => {
+            return `UPDATE SET${body.replace(assignmentPattern, "$2 =")}`;
+          });
+        });
+
+        next = next.replace(/\bINSERT\s*\(([\s\S]*?)\)/gi, (_, columns) => {
+          const convertedColumns = splitArgs(columns)
+            .map((column) => removeColumnQualifier(column, qualifiers))
+            .join(", ");
+          return `INSERT (${convertedColumns})`;
+        });
+
+        return next;
+      }).join("");
+    }
+
+    function convertUpdateSetQualifiers(sql) {
+      return splitSqlStatements(sql).map((statement) => {
+        const updateMatch = statement.match(/^\s*UPDATE\s+((?:"[^"]+"|[A-Za-z_][\w$#]*)(?:\s*\.\s*(?:"[^"]+"|[A-Za-z_][\w$#]*))?)(?:\s+(?:AS\s+)?("[^"]+"|[A-Za-z_][\w$#]*))?\s+SET\b/i);
+        if (!updateMatch) {
+          return statement;
+        }
+
+        const targetTable = updateMatch[1];
+        const targetAlias = updateMatch[2] && !/^(SET|WHERE)$/i.test(updateMatch[2]) ? updateMatch[2] : "";
+        const qualifiers = [targetAlias, tableBaseName(targetTable)];
+        let next = statement;
+
+        qualifiers.forEach((qualifier) => {
+          if (!qualifier) {
+            return;
+          }
+          const assignmentPattern = new RegExp(`\\b(${identifierQualifierPattern(qualifier)})\\s*\\.\\s*((?:"[^"]+"|[A-Za-z_][\\w$#]*))\\s*=`, "gi");
+          next = next.replace(/\bSET\b([\s\S]*?)(?=\bWHERE\b|;$|$)/i, (full, body) => {
+            return `SET${body.replace(assignmentPattern, "$2 =")}`;
+          });
+        });
+
+        return next;
+      }).join("");
+    }
+
+    function appendSelectLimit(statement, limit) {
+      const semicolonMatch = statement.match(/;\s*$/);
+      const semicolon = semicolonMatch ? ";" : "";
+      const body = semicolonMatch ? statement.slice(0, semicolonMatch.index) : statement;
+      const trimmedBody = body
+        .replace(/\bWHERE\s+(?=(ORDER\s+BY|GROUP\s+BY|HAVING|FETCH|OFFSET|LIMIT)\b)/gi, "")
+        .replace(/\s{2,}(?=(ORDER\s+BY|GROUP\s+BY|HAVING|FETCH|OFFSET|LIMIT)\b)/gi, " ")
+        .trimEnd();
+      return `${trimmedBody}\nLIMIT ${limit}${semicolon}`;
+    }
+
+    function convertSelectRownumLimit(statement) {
+      let next = statement;
+      let limit = "";
+      let changed = false;
+
+      const rememberLimit = (value) => {
+        limit = limit || value;
+        changed = true;
+      };
+
+      next = replaceOutsideSqlLiterals(next, /\bWHERE\s+ROWNUM\s*<=\s*(\d+)\s+AND\s+/gi, (_, value) => {
+        rememberLimit(value);
+        return "WHERE ";
+      });
+      next = replaceOutsideSqlLiterals(next, /\s+AND\s+ROWNUM\s*<=\s*(\d+)\s+AND\s+/gi, (_, value) => {
+        rememberLimit(value);
+        return " AND ";
+      });
+      next = replaceOutsideSqlLiterals(next, /\s+AND\s+ROWNUM\s*<=\s*(\d+)(?=\s+(?:ORDER\s+BY|GROUP\s+BY|HAVING|FETCH|OFFSET|LIMIT)\b|;?\s*$)/gi, (_, value) => {
+        rememberLimit(value);
+        return "";
+      });
+      next = replaceOutsideSqlLiterals(next, /\bWHERE\s+ROWNUM\s*<=\s*(\d+)(?=\s+(?:ORDER\s+BY|GROUP\s+BY|HAVING|FETCH|OFFSET|LIMIT)\b|;?\s*$)/gi, (_, value) => {
+        rememberLimit(value);
+        return "";
+      });
+
+      if (!changed) {
+        return {
+          sql: statement,
+          changed: false
+        };
+      }
+
+      return {
+        sql: appendSelectLimit(next, limit),
+        changed: true
+      };
+    }
+
+    function convertLimit(sql, warnings) {
+      const next = splitSqlStatements(sql).map((statement) => {
+        if (!matchesOutsideSqlLiterals(statement, /\bROWNUM\b/i)) {
+          return statement;
+        }
+
+        if (!/^\s*SELECT\b/i.test(statement)) {
+          warnings.push("SELECT 以外の ROWNUM 条件は LIMIT へ自動変換せず、手動確認してください。");
+          return statement;
+        }
+
+        const result = convertSelectRownumLimit(statement);
+        if (!result.changed || matchesOutsideSqlLiterals(result.sql, /\bROWNUM\b/i)) {
+          warnings.push("ROWNUM の複雑な条件は手動確認してください。");
+        }
+        return result.sql;
+      }).join("");
+
+      return next;
+    }
+
+    function removeDual(sql) {
+      return replaceOutsideSqlLiterals(
+        sql,
+        /\s+FROM\s+(?:SYS\.)?(?:DUAL|DUEL)\b(?:\s+(?:AS\s+)?(?!(?:WHERE|ORDER|GROUP|HAVING|CONNECT|START|UNION|MINUS|INTERSECT|FETCH|OFFSET)\b)[A-Za-z_][\w$#]*)?/gi,
+        ""
+      );
+    }
+
+    function removeStorageClauses(sql) {
+      return [
+        [/\bTABLESPACE\s+\S+/gi, ""],
+        [/\bPCTFREE\s+\d+/gi, ""],
+        [/\bPCTUSED\s+\d+/gi, ""],
+        [/\bINITRANS\s+\d+/gi, ""],
+        [/\bMAXTRANS\s+\d+/gi, ""],
+        [/\bSTORAGE\s*\([^;]*?\)/gi, ""],
+        [/\bSEGMENT\s+CREATION\s+(?:IMMEDIATE|DEFERRED)\b/gi, ""]
+      ].reduce((next, [pattern, replacement]) => replaceOutsideSqlLiterals(next, pattern, replacement), sql);
+    }
+
+    function convertIdentity(sql) {
+      return replaceOutsideSqlLiterals(
+        sql,
+        /\bGENERATED\s+(ALWAYS|BY\s+DEFAULT)(?:\s+ON\s+NULL)?\s+AS\s+IDENTITY\s*(?:\([^)]*\))?/gi,
+        (_, mode) => `GENERATED ${mode.toUpperCase()} AS IDENTITY`
+      );
+    }
+
+    function convertComments(sql) {
+      return replaceOutsideSqlLiterals(sql, /COMMENT\s+ON\s+COLUMN\s+([A-Za-z_][\w$#.]*)\s+IS\s+('(?:''|[^'])*')/gi, "COMMENT ON COLUMN $1 IS $2");
+    }
+
+    function collectWarnings(original, converted) {
+      const warnings = [];
+
+      const checks = [
+        [/\(\+\)/, "Oracle 外部結合記法 (+) は JOIN へ手動変換してください。"],
+        [/\bCONNECT\s+BY\b/i, "CONNECT BY / START WITH 階層問い合わせは WITH RECURSIVE へ手動変換してください。"],
+        [/\bCREATE\s+OR\s+REPLACE\s+TRIGGER\b/i, "Oracle トリガーは PL/pgSQL 形式へ手動変換してください。"],
+        [/\bPACKAGE\b/i, "Oracle PACKAGE は PostgreSQL に直接対応しません。"],
+        [/\bPRAGMA\b/i, "PRAGMA は PostgreSQL に直接対応しません。"],
+        [/\bDBMS_[A-Z0-9_]+\b/i, "DBMS_* パッケージ呼び出しは手動変換してください。"],
+        [/\bBULK\s+COLLECT\b/i, "BULK COLLECT は PL/pgSQL の実装へ置き換えてください。"],
+        [/\bFORALL\b/i, "FORALL は PostgreSQL に直接対応しません。"],
+        [/\bROWID\b/i, "ROWID は ctid などへの置換可否を手動確認してください。"],
+        [/\bSYSDATE\s*[-+]\s*(?!\d+(?:\.\d+)?\b)/i, "SYSDATE の数値以外の加減算は interval へ手動確認してください。"],
+        [/\bALTER\s+TABLE\b[\s\S]*?\bMODIFY\b/i, "ALTER TABLE MODIFY は ALTER COLUMN へ手動変換してください。"],
+        [/\bVARCHAR2\s*\([^)]*\s+CHAR\s*\)/i, "VARCHAR2(... CHAR) の文字数セマンティクスは PostgreSQL 側で確認してください。"],
+        [/\bSUBSTRB\s*\(/i, "SUBSTRB はバイト単位の切り出しのため、マルチバイト有無を含めて個別確認してください。"],
+        [/\bREGEXP_SUBSTR\s*\(/i, "REGEXP_SUBSTR は検索開始位置とパターン互換性を個別確認してください。"],
+        [/\bREGEXP_LIKE\s*\(/i, "REGEXP_LIKE はパターン互換性を個別確認してください。"],
+        [/\bTO_MULTI_BYTE\s*\(/i, "TO_MULTI_BYTE はPostgreSQL側の関数定義を確認してください。"],
+        [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"],
+        [/\|\|/i, "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を確認してください。"],
+        [/\bTRIM\s*\([^)]*\)\s+IS\s+NULL\b/i, "TRIM結果のNULL判定は NULLIF(TRIM(...), '') IS NULL への変更要否を確認してください。"]
+      ];
+
+      checks.forEach(([pattern, message]) => {
+        if (matchesOutsideSqlLiterals(original, pattern)) {
+          warnings.push(message);
+        }
+      });
+
+      if (matchesOutsideSqlLiterals(original, /\bMERGE\s+INTO\b/i) && matchesOutsideSqlLiterals(converted, /\bUSING\s*\(\s*SELECT\b/i)) {
+        warnings.push("MERGE USING (SELECT ...) が残っています。VALUES 句または実テーブル USING へ手動確認してください。");
+      }
+
+      if (matchesOutsideSqlLiterals(converted, /\bFROM\s+(?:SYS\.)?DUAL\b/i)) {
+        warnings.push("FROM DUAL が残っています。該当箇所を確認してください。");
+      }
+
+      if (matchesOutsideSqlLiterals(converted, /TODO:/i) || /\/\*\s*TODO:/i.test(converted)) {
+        warnings.push("TODO コメントが残っています。該当箇所を確認してください。");
+      }
+
+      return [...new Set(warnings)];
+    }
+
+    function normalizeWhitespace(sql) {
+      return sql
+        .replace(/[ \t]+$/gm, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .replace(/[ \t]+;/g, ";")
+        .trim();
+    }
+
+    function convertOracleToPostgres(input) {
+      const originalLineEnding = input.includes("\r\n") ? "\r\n" : "\n";
+      let sql = input.replace(/\r\n/g, "\n");
+      const rownumWarnings = [];
+      const conversionWarnings = [];
+
+      sql = normalizeKnownTypos(sql, conversionWarnings);
+      sql = convertSequences(sql);
+      sql = convertCurrentDateTimeTokens(sql);
+      simpleReplacements.forEach(([pattern, replacement]) => {
+        sql = replaceOutsideSqlLiterals(sql, pattern, replacement);
+      });
+      sql = replaceFunctionCalls(sql, "NVL2", convertNvl2, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "NVL", convertNvl, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "DECODE", convertDecode, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "ADD_MONTHS", convertAddMonths, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "MONTHS_BETWEEN", convertMonthsBetween, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "INSTR", convertInstr, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "TRUNC", convertTrunc, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "TO_CHAR", convertToChar, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "TO_DATE", convertToDate, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "TO_NUMBER", convertToNumber, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "SUBSTR", convertSubstr, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "LPAD", convertLpad, conversionWarnings);
+      sql = replaceFunctionCalls(sql, "LAST_DAY", convertLastDay, conversionWarnings);
+      sql = convertMergeUsingDual(sql, conversionWarnings);
+      sql = convertMergeTargetQualifiers(sql);
+      sql = convertUpdateSetQualifiers(sql);
+      sql = removeDual(sql);
+      sql = removeStorageClauses(sql);
+      sql = convertIdentity(sql);
+      sql = convertComments(sql);
+      sql = convertLimit(sql, rownumWarnings);
+      if (originalLineEnding !== "\n") {
+        sql = sql.replace(/\n/g, originalLineEnding);
+      }
+
+      const warnings = conversionWarnings.concat(collectWarnings(input, sql), rownumWarnings);
+      return {
+        sql,
+        warnings: [...new Set(warnings)]
+      };
+    }
+
+    function renderWarnings(warnings, title = "警告 / エラー") {
+      warningsList.innerHTML = "";
+      if (!warnings.length) {
+        messagesDrawer.hidden = true;
+        return;
+      }
+
+      messagesTitle.textContent = title;
+      messagesDrawer.hidden = false;
+      warnings.forEach((warning) => {
+        const item = document.createElement("li");
+        item.textContent = warning;
+        warningsList.appendChild(item);
+      });
+    }
+
+    function convert() {
+      const source = oracleSql.value;
+      if (!source.trim()) {
+        postgresSql.value = "";
+        renderWarnings([]);
+        updateMeta();
+        renderSqlHighlights();
+        syncOracleHighlightScroll();
+        return;
+      }
+
+      try {
+        const result = convertOracleToPostgres(source);
+        postgresSql.value = result.sql;
+        renderWarnings(result.warnings);
+        updateMeta();
+      } catch (error) {
+        postgresSql.value = "";
+        renderWarnings([`変換エラー: ${error.message}`], "エラー");
+        updateMeta();
+      }
+      renderSqlHighlights();
+      syncOracleHighlightScroll();
+    }
+
+    function clearOracle() {
+      oracleSql.value = "";
+      postgresSql.value = "";
+      renderWarnings([]);
+      renderSqlHighlights();
+      syncOracleHighlightScroll();
+      updateMeta();
+      oracleSql.focus();
+      showToast("クリアしました。");
+    }
+
+    async function copyPostgres() {
+      const value = postgresSql.value;
+      if (!value.trim()) {
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(value);
+        showToast("コピーしました。");
+      } catch (error) {
+        const selection = window.getSelection();
+        const range = document.createRange();
+        range.selectNodeContents(postgresHighlight);
+        selection.removeAllRanges();
+        selection.addRange(range);
+        document.execCommand("copy");
+        selection.removeAllRanges();
+        showToast("コピーしました。");
+      }
+    }
+
+    oracleSql.addEventListener("input", convert);
+    oracleSql.addEventListener("scroll", syncOracleHighlightScroll);
+    clearOracleButton.addEventListener("click", clearOracle);
+    copyPostgresButton.addEventListener("click", copyPostgres);
+
+    function isImeComposing(event) {
+      return event.isComposing || event.keyCode === 229 || event.which === 229;
+    }
+
+    oracleSql.addEventListener("keydown", (event) => {
+      if (event.key === "Tab" && !event.shiftKey && !isImeComposing(event)) {
+        event.preventDefault();
+        const start = oracleSql.selectionStart;
+        const end = oracleSql.selectionEnd;
+        oracleSql.setRangeText("  ", start, end, "end");
+        convert();
+      }
+    });
+
+    renderSqlHighlights();
+    updateMeta();
+  </script>
+</body>
+</html>
