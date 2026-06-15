@@ -571,7 +571,7 @@
     ]);
 
     const sqlFunctions = new Set([
-      "ADD_MONTHS", "AGE", "COALESCE", "CURRVAL", "DATE_TRUNC", "DECODE", "EXTRACT",
+      "ADD_MONTHS", "AGE", "CLOCK_TIMESTAMP", "COALESCE", "CURRVAL", "DATE_TRUNC", "DECODE", "EXTRACT",
       "INSTR", "LAST_DAY", "LPAD", "MONTHS_BETWEEN", "NEXTVAL", "NVL", "NVL2",
       "POSITION", "SUBSTR", "SUBSTRB", "SUBSTRING", "SYSDATE", "SYSTIMESTAMP",
       "TO_CHAR", "TO_DATE", "TO_NUMBER", "TRUNC"
@@ -1445,7 +1445,7 @@
 
     function isDateLikeTruncExpression(expression) {
       const normalized = expression.trim();
-      return /^(CURRENT_DATE|CURRENT_TIMESTAMP|LOCALTIMESTAMP|LOCALTIME)\b/i.test(normalized)
+      return /^(CLOCK_TIMESTAMP|CURRENT_DATE|CURRENT_TIMESTAMP|LOCALTIMESTAMP|LOCALTIME)\b/i.test(normalized)
         || /^(TO_DATE|TO_TIMESTAMP)\s*\(/i.test(normalized)
         || /^(DATE|TIMESTAMP)\s*'/i.test(normalized)
         || /\b(date|time|timestamp|created_at|updated_at|deleted_at|published_at)\b/i.test(normalized);
@@ -1621,10 +1621,10 @@
       let next = replaceOutsideSqlLiterals(
         sql,
         /\bSYSDATE\s*([+-])\s*(\d+(?:\.\d+)?)\b/gi,
-        (_, operator, days) => `LOCALTIMESTAMP ${operator} INTERVAL '${days} day'`
+        (_, operator, days) => `CLOCK_TIMESTAMP() ${operator} INTERVAL '${days} day'`
       );
-      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CURRENT_TIMESTAMP");
-      next = replaceOutsideSqlLiterals(next, /\bSYSDATE\b/gi, "LOCALTIMESTAMP");
+      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CLOCK_TIMESTAMP()");
+      next = replaceOutsideSqlLiterals(next, /\bSYSDATE\b/gi, "CLOCK_TIMESTAMP()");
       return next;
     }
 
