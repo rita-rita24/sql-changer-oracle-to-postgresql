@@ -1778,7 +1778,7 @@
         return `ADD_MONTHS(${argsText})`;
       }
       context.warnings?.push("ADD_MONTHS は月末計算でOracleと差が出るため、PostgreSQL側の add_months 関数定義を確認してください。");
-      return formatCall("add_months", args, argsText, context);
+      return formatCall("ADD_MONTHS", args, argsText, context);
     }
 
     function convertMonthsBetween(args, argsText, context = {}) {
@@ -1834,35 +1834,16 @@
     }
 
     function convertInstr(args, argsText, context = {}) {
-      if (args.length === 2) {
-        if (context.hasMultilineArgs) {
-          const indent = context.indent || "";
-          const innerIndent = nestedIndentFromArgs(argsText, indent);
-          return `POSITION(\n${innerIndent}${args[1]}\n${innerIndent}IN ${args[0]}\n${indent})`;
-        }
-        return `POSITION(${args[1]} IN ${args[0]})`;
-      }
-      context.warnings?.push("INSTR の第3・第4引数はPostgreSQL標準関数で表現できないため、instr 関数定義を確認してください。");
-      return formatCall("instr", args.length ? args : [argsText], argsText, context);
+      context.warnings?.push("INSTR はPostgreSQL側の instr 関数定義を確認してください。");
+      return formatCall("INSTR", args.length ? args : [argsText], argsText, context);
     }
 
     function convertTrunc(args, argsText, context = {}) {
-      if (args.length === 1) {
-        if (isDateLikeTruncExpression(args[0])) {
-          return formatDateTrunc(args[0], "day", argsText, context);
+      if (args.length === 1 || args.length === 2) {
+        if (args.some((arg) => isQuotedSqlLiteral(arg)) || isDateLikeTruncExpression(args[0])) {
+          context.warnings?.push("TRUNC の日付引数はPostgreSQL側の trunc(date, format) 関数定義を確認してください。");
         }
-        return `trunc(${args[0]})`;
-      }
-
-      if (args.length === 2) {
-        const unit = isQuotedSqlLiteral(args[1]) ? dateTruncUnit(args[1]) : "";
-        if (unit) {
-          return formatDateTrunc(args[0], unit, argsText, context);
-        }
-        if (!isQuotedSqlLiteral(args[1])) {
-          return `trunc(${args[0]}, ${args[1]})`;
-        }
-        context.warnings?.push("TRUNC の日付書式をPostgreSQL date_truncへ対応できないため、該当箇所は手動確認してください。");
+        return formatCall("TRUNC", args, argsText, context);
       }
 
       return `TRUNC(${argsText})`;
@@ -1873,9 +1854,9 @@
         if (context.hasMultilineArgs) {
           const indent = context.indent || "";
           const innerIndent = nestedIndentFromArgs(argsText, indent);
-          return `to_char(\n${innerIndent}${args[0]},\n${innerIndent}${normalizeDateFormat(args[1])}\n${indent})`;
+          return `TO_CHAR(\n${innerIndent}${args[0]},\n${innerIndent}${normalizeDateFormat(args[1])}\n${indent})`;
         }
-        return `to_char(${args[0]}, ${normalizeDateFormat(args[1])})`;
+        return `TO_CHAR(${args[0]}, ${normalizeDateFormat(args[1])})`;
       }
       if (args.length === 1) {
         let format = "'FM999999999'";
@@ -1884,9 +1865,9 @@
         } else if (!isNumericLikeExpression(args[0])) {
           context.warnings?.push("TO_CHAR の第1引数の型を判定できないため、補完した書式を確認してください。");
         }
-        return formatCall("to_char", [args[0], format], argsText, context);
+        return formatCall("TO_CHAR", [args[0], format], argsText, context);
       }
-      return `to_char(${argsText})`;
+      return `TO_CHAR(${argsText})`;
     }
 
     function convertToDate(args, argsText, context = {}) {
@@ -1894,17 +1875,17 @@
         if (context.hasMultilineArgs) {
           const indent = context.indent || "";
           const innerIndent = nestedIndentFromArgs(argsText, indent);
-          return `to_date(\n${innerIndent}${args[0]},\n${innerIndent}${normalizeDateFormat(args[1])}\n${indent})`;
+          return `TO_DATE(\n${innerIndent}${args[0]},\n${innerIndent}${normalizeDateFormat(args[1])}\n${indent})`;
         }
-        return `to_date(${args[0]}, ${normalizeDateFormat(args[1])})`;
+        return `TO_DATE(${args[0]}, ${normalizeDateFormat(args[1])})`;
       }
       if (args.length === 1) {
         const argument = isSqlStringLiteral(args[0]) && !isEmptySqlStringLiteral(args[0])
           ? args[0]
           : nullIfEmpty(args[0]);
-        return formatCall("to_date", [argument, defaultDateFormat(args[0])], argsText, context);
+        return formatCall("TO_DATE", [argument, defaultDateFormat(args[0])], argsText, context);
       }
-      return `to_date(${argsText})`;
+      return `TO_DATE(${argsText})`;
     }
 
     function normalizeDateFormat(formatLiteral) {
@@ -1915,16 +1896,16 @@
 
     function convertToNumber(args, argsText, context = {}) {
       if (args.length >= 2) {
-        return formatCall("to_number", args, argsText, context);
+        return formatCall("TO_NUMBER", args, argsText, context);
       }
       if (args.length !== 1) {
-        return `to_number(${argsText})`;
+        return `TO_NUMBER(${argsText})`;
       }
 
       const argument = isSqlStringLiteral(args[0]) && !isEmptySqlStringLiteral(args[0])
         ? args[0]
         : nullIfEmpty(args[0]);
-      return formatCall("to_number", [argument, defaultNumberFormat(args[0])], argsText, context);
+      return formatCall("TO_NUMBER", [argument, defaultNumberFormat(args[0])], argsText, context);
     }
 
     function convertTrimNullPredicates(sql) {
@@ -1995,8 +1976,7 @@
           return formatCall("RIGHT", [source, lengthFromEnd], argsText, context);
         }
         if (args.length === 3) {
-          const convertedStart = `char_length(${source}) - ${lengthFromEnd} + 1`;
-          return formatCall("SUBSTRING", [source, convertedStart, args[2]], argsText, context);
+          return formatCall("SUBSTR", [`RIGHT(${source}, ${lengthFromEnd})`, "1", args[2]], argsText, context);
         }
         context.warnings?.push("SUBSTR の負数開始位置と追加引数の組み合わせは手動確認してください。");
         return `SUBSTR(${argsText})`;
@@ -2006,7 +1986,7 @@
       if (/^\+?0$/.test(start)) {
         convertedArgs[1] = "1";
       }
-      return formatCall("SUBSTRING", convertedArgs, argsText, context);
+      return formatCall("SUBSTR", convertedArgs, argsText, context);
     }
 
     function convertLpad(args, argsText, context = {}) {
@@ -2028,12 +2008,8 @@
       if (args.length !== 1) {
         return `LAST_DAY(${argsText})`;
       }
-      if (context.hasMultilineArgs) {
-        const indent = context.indent || "";
-        const innerIndent = nestedIndentFromArgs(argsText, indent);
-        return `(\n${innerIndent}date_trunc('month', ${args[0]})\n${innerIndent}+ INTERVAL '1 month'\n${innerIndent}- INTERVAL '1 day'\n${indent})::date`;
-      }
-      return `(date_trunc('month', ${args[0]}) + INTERVAL '1 month' - INTERVAL '1 day')::date`;
+      context.warnings?.push("LAST_DAY はPostgreSQL側の last_day 関数定義を確認してください。");
+      return formatCall("LAST_DAY", args, argsText, context);
     }
 
     function convertSequences(sql) {
@@ -2050,7 +2026,7 @@
         /\bSYSDATE\s*([+-])\s*(\d+(?:\.\d+)?)\b/gi,
         (_, operator, days) => `CLOCK_TIMESTAMP() ${operator} INTERVAL '${days} day'`
       );
-      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CLOCK_TIMESTAMP()");
+      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CURRENT_TIMESTAMP");
       next = replaceOutsideSqlLiterals(next, /\bSYSDATE\b/gi, "CLOCK_TIMESTAMP()");
       return next;
     }
