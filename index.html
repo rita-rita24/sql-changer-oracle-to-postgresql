@@ -617,6 +617,11 @@
     function readQuoted(sql, start, quote) {
       let index = start + 1;
       while (index < sql.length) {
+        if (sql[index] === "\\" && sql[index + 1] !== undefined) {
+          index += 2;
+          continue;
+        }
+
         if (sql[index] === quote) {
           if (sql[index + 1] === quote) {
             index += 2;
@@ -628,6 +633,118 @@
         }
       }
       return sql.length;
+    }
+
+    function readDoubleQuotedContent(sql, start) {
+      let index = start + 1;
+      let raw = "";
+
+      while (index < sql.length) {
+        const char = sql[index];
+        const next = sql[index + 1];
+
+        if (char === "\\" && next !== undefined) {
+          raw += char + next;
+          index += 2;
+          continue;
+        }
+
+        if (char === '"') {
+          if (next === '"') {
+            raw += '""';
+            index += 2;
+            continue;
+          }
+
+          return {
+            end: index + 1,
+            raw
+          };
+        }
+
+        raw += char;
+        index += 1;
+      }
+
+      return {
+        end: sql.length,
+        raw
+      };
+    }
+
+    function decodeDoubleQuotedContent(raw) {
+      const usesBackslashEscapes = /\\./.test(raw);
+      const usesDoubledQuotes = raw.includes('""');
+      let text = "";
+
+      for (let index = 0; index < raw.length; index += 1) {
+        const char = raw[index];
+        const next = raw[index + 1];
+
+        if (usesBackslashEscapes && char === "\\" && next !== undefined) {
+          if (next === "n") {
+            text += "\n";
+          } else if (next === "r") {
+            text += "\r";
+          } else if (next === "t") {
+            text += "\t";
+          } else {
+            text += next;
+          }
+          index += 1;
+          continue;
+        }
+
+        if (!usesBackslashEscapes && char === '"' && next === '"') {
+          text += '"';
+          index += 1;
+          continue;
+        }
+
+        text += char;
+      }
+
+      return {
+        text,
+        quoteStyle: usesBackslashEscapes ? "backslash" : usesDoubledQuotes ? "doubled" : "plain"
+      };
+    }
+
+    function encodeDoubleQuotedContent(text, quoteStyle) {
+      if (quoteStyle === "backslash" || (quoteStyle === "plain" && text.includes('"'))) {
+        return text
+          .replace(/\\/g, "\\\\")
+          .replace(/\r/g, "\\r")
+          .replace(/\n/g, "\\n")
+          .replace(/\t/g, "\\t")
+          .replace(/"/g, '\\"');
+      }
+
+      if (quoteStyle === "doubled") {
+        return text.replace(/"/g, '""');
+      }
+
+      return text;
+    }
+
+    function isLikelyEmbeddedSqlString(text) {
+      const trimmed = text.trim();
+      if (!trimmed) {
+        return false;
+      }
+
+      if (/^(SELECT|WITH|INSERT|UPDATE|DELETE|MERGE|CREATE|ALTER|DROP|COMMENT|TRUNCATE|GRANT|REVOKE|DECLARE|BEGIN)\b/i.test(trimmed)) {
+        return true;
+      }
+
+      const oracleSpecificToken = /\b(FROM\s+(?:SYS\.)?(?:DUAL|DUEL)|ROWNUM|VARCHAR2\s*\(|NVARCHAR2\s*\(|NUMBER\s*(?:\(|,|$)|SYSDATE|SYSTIMESTAMP|[A-Za-z_][\w$#.]*\.(?:NEXTVAL|CURRVAL)|DECODE\s*\(|NVL2?\s*\(|TO_(?:CHAR|DATE|NUMBER)\s*\(|SUBSTR\s*\(|LPAD\s*\(|TRUNC\s*\()/i;
+      const sqlContextToken = /\b(SELECT|FROM|WHERE|UPDATE|INSERT|CREATE|ALTER|MERGE|DELETE|VALUES|SET|CAST|JOIN|ORDER\s+BY|GROUP\s+BY)\b/i;
+      if (oracleSpecificToken.test(trimmed) && sqlContextToken.test(trimmed)) {
+        return true;
+      }
+
+      return /^(FROM|WHERE|AND|OR|ORDER\s+BY|GROUP\s+BY|HAVING|UNION|JOIN|LEFT|RIGHT|INNER|OUTER|VALUES|SET)\b/i.test(trimmed)
+        && oracleSpecificToken.test(trimmed);
     }
 
     function readOracleQuotedLiteral(sql, start) {
@@ -882,6 +999,12 @@
 
         if (quote) {
           current += char;
+          if (char === "\\" && next !== undefined) {
+            current += next;
+            i += 1;
+            continue;
+          }
+
           if (char === quote) {
             if (next === quote) {
               current += next;
@@ -936,6 +1059,11 @@
         const next = text[i + 1];
 
         if (quote) {
+          if (char === "\\" && next !== undefined) {
+            i += 1;
+            continue;
+          }
+
           if (char === quote) {
             if (next === quote) {
               i += 1;
@@ -993,6 +1121,11 @@
         const next = sql[i + 1];
 
         if (quote) {
+          if (char === "\\" && next !== undefined) {
+            i += 1;
+            continue;
+          }
+
           if (char === quote) {
             if (next === quote) {
               i += 1;
@@ -1032,6 +1165,11 @@
         const next = text[i + 1];
 
         if (quote) {
+          if (char === "\\" && next !== undefined) {
+            i += 1;
+            continue;
+          }
+
           if (char === quote) {
             if (next === quote) {
               i += 1;
@@ -1081,6 +1219,11 @@
         const next = text[i + 1];
 
         if (quote) {
+          if (char === "\\" && next !== undefined) {
+            i += 1;
+            continue;
+          }
+
           if (char === quote) {
             if (next === quote) {
               i += 1;
@@ -1861,7 +2004,7 @@
     function removeDual(sql) {
       return replaceOutsideSqlLiterals(
         sql,
-        /\s+FROM\s+(?:SYS\.)?(?:DUAL|DUEL)\b(?:\s+(?:AS\s+)?(?!(?:WHERE|ORDER|GROUP|HAVING|CONNECT|START|UNION|MINUS|INTERSECT|FETCH|OFFSET)\b)[A-Za-z_][\w$#]*)?/gi,
+        /(^|\s+)FROM\s+(?:SYS\.)?(?:DUAL|DUEL)\b(?:\s+(?:AS\s+)?(?!(?:WHERE|ORDER|GROUP|HAVING|CONNECT|START|UNION|MINUS|INTERSECT|FETCH|OFFSET)\b)[A-Za-z_][\w$#]*)?/gi,
         ""
       );
     }
@@ -1944,9 +2087,8 @@
         .trim();
     }
 
-    function convertOracleToPostgres(input) {
-      const originalLineEnding = input.includes("\r\n") ? "\r\n" : "\n";
-      let sql = input.replace(/\r\n/g, "\n");
+    function convertOracleSqlContent(input, warningSource = input) {
+      let sql = input;
       const rownumWarnings = [];
       const conversionWarnings = [];
 
@@ -1977,14 +2119,100 @@
       sql = convertIdentity(sql);
       sql = convertComments(sql);
       sql = convertLimit(sql, rownumWarnings);
+
+      const warnings = conversionWarnings.concat(collectWarnings(warningSource, sql), rownumWarnings);
+      return {
+        sql,
+        warnings: [...new Set(warnings)]
+      };
+    }
+
+    function convertDoubleQuotedSqlStrings(input, warnings) {
+      let output = "";
+      let index = 0;
+
+      while (index < input.length) {
+        const rest = input.slice(index);
+        const char = input[index];
+
+        if (rest.startsWith("--")) {
+          const end = input.indexOf("\n", index);
+          const next = end === -1 ? input.length : end;
+          output += input.slice(index, next);
+          index = next;
+          continue;
+        }
+
+        if (rest.startsWith("/*")) {
+          const end = input.indexOf("*/", index + 2);
+          const next = end === -1 ? input.length : end + 2;
+          output += input.slice(index, next);
+          index = next;
+          continue;
+        }
+
+        const oracleQuotedEnd = readOracleQuotedLiteral(input, index);
+        if (oracleQuotedEnd) {
+          output += input.slice(index, oracleQuotedEnd);
+          index = oracleQuotedEnd;
+          continue;
+        }
+
+        const dollarTag = rest.match(/^\$[A-Za-z_][\w$]*\$|^\$\$/);
+        if (dollarTag) {
+          const tag = dollarTag[0];
+          const end = input.indexOf(tag, index + tag.length);
+          const next = end === -1 ? input.length : end + tag.length;
+          output += input.slice(index, next);
+          index = next;
+          continue;
+        }
+
+        if (char === "'") {
+          const next = readQuoted(input, index, "'");
+          output += input.slice(index, next);
+          index = next;
+          continue;
+        }
+
+        if (char === '"') {
+          const quoted = readDoubleQuotedContent(input, index);
+          const decoded = decodeDoubleQuotedContent(quoted.raw);
+
+          if (isLikelyEmbeddedSqlString(decoded.text)) {
+            const result = convertOracleSqlContent(decoded.text);
+            warnings.push(...result.warnings.map((warning) => `ダブルクォート内SQL: ${warning}`));
+            output += `"${encodeDoubleQuotedContent(result.sql, decoded.quoteStyle)}"`;
+          } else {
+            output += input.slice(index, quoted.end);
+          }
+
+          index = quoted.end;
+          continue;
+        }
+
+        output += char;
+        index += 1;
+      }
+
+      return output;
+    }
+
+    function convertOracleToPostgres(input) {
+      const originalLineEnding = input.includes("\r\n") ? "\r\n" : "\n";
+      const normalizedInput = input.replace(/\r\n/g, "\n");
+      const embeddedWarnings = [];
+      const sqlWithConvertedEmbeddedStrings = convertDoubleQuotedSqlStrings(normalizedInput, embeddedWarnings);
+      const result = convertOracleSqlContent(sqlWithConvertedEmbeddedStrings, normalizedInput);
+      let sql = result.sql;
+
       if (originalLineEnding !== "\n") {
         sql = sql.replace(/\n/g, originalLineEnding);
       }
 
-      const warnings = conversionWarnings.concat(collectWarnings(input, sql), rownumWarnings);
       return {
         sql,
-        warnings: [...new Set(warnings)]
+        warnings: [...new Set(embeddedWarnings.concat(result.warnings))]
       };
     }
 
