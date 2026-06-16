@@ -727,7 +727,19 @@
       return text;
     }
 
-    function isLikelyEmbeddedSqlString(text) {
+    function isSqlQuotedIdentifierContext(source, start, end) {
+      const before = source.slice(Math.max(0, start - 120), start);
+      const after = source.slice(end, Math.min(source.length, end + 120));
+      const statementPrefix = source.slice(Math.max(source.lastIndexOf(";", start - 1) + 1, 0), start);
+      const sqlKeywordInStatement = /\b(SELECT|AS|FROM|JOIN|WHERE|ON|BY|ORDER|GROUP|UPDATE|SET|INSERT|INTO|MERGE|DELETE|CREATE|ALTER|TABLE|COLUMN|COMMENT)\b/i.test(statementPrefix);
+      const identifierBoundaryAfter = /^\s*(?:AS\b|FROM\b|WHERE\b|JOIN\b|ON\b|,|\.|=|\)|;)/i.test(after);
+      const aliasContext = /\bAS\s*$/i.test(before) || /^\s*AS\b/i.test(after);
+      const dottedIdentifierContext = /\.\s*$/.test(before) || /^\s*\./.test(after);
+      const functionArgumentContext = /\b(?:COUNT|SUM|AVG|MIN|MAX|LOWER|UPPER|TRIM|COALESCE|NULLIF|CAST|TO_CHAR|TO_DATE|TO_NUMBER|SUBSTR|SUBSTRING|LPAD|RPAD)\s*\(\s*$/i.test(before);
+      return aliasContext || dottedIdentifierContext || functionArgumentContext || (sqlKeywordInStatement && identifierBoundaryAfter);
+    }
+
+    function isLikelyEmbeddedSqlString(text, source = "", start = 0, end = 0) {
       const trimmed = text.trim();
       if (!trimmed) {
         return false;
@@ -737,14 +749,29 @@
         return true;
       }
 
-      const oracleSpecificToken = /\b(FROM\s+(?:SYS\.)?(?:DUAL|DUEL)|ROWNUM|VARCHAR2\s*\(|NVARCHAR2\s*\(|NUMBER\s*(?:\(|,|$)|SYSDATE|SYSTIMESTAMP|[A-Za-z_][\w$#.]*\.(?:NEXTVAL|CURRVAL)|DECODE\s*\(|NVL2?\s*\(|TO_(?:CHAR|DATE|NUMBER)\s*\(|SUBSTR\s*\(|LPAD\s*\(|TRUNC\s*\()/i;
-      const sqlContextToken = /\b(SELECT|FROM|WHERE|UPDATE|INSERT|CREATE|ALTER|MERGE|DELETE|VALUES|SET|CAST|JOIN|ORDER\s+BY|GROUP\s+BY)\b/i;
-      if (oracleSpecificToken.test(trimmed) && sqlContextToken.test(trimmed)) {
+      const oracleSpecificToken = /\b(FROM\s+(?:SYS\.)?(?:DUAL|DUEL)|ROWNUM|VARCHAR2\s*\(|NVARCHAR2\s*\(|NUMBER\b|DATE\b|SYSDATE|SYSTIMESTAMP|[A-Za-z_][\w$#.]*\.(?:NEXTVAL|CURRVAL)|DECODE\s*\(|NVL2?\s*\(|TO_(?:CHAR|DATE|NUMBER)\s*\(|SUBSTR\s*\(|LPAD\s*\(|TRUNC\s*\()/i;
+      if (!oracleSpecificToken.test(trimmed)) {
+        return false;
+      }
+
+      if (text !== trimmed) {
         return true;
       }
 
-      return /^(FROM|WHERE|AND|OR|ORDER\s+BY|GROUP\s+BY|HAVING|UNION|JOIN|LEFT|RIGHT|INNER|OUTER|VALUES|SET)\b/i.test(trimmed)
-        && oracleSpecificToken.test(trimmed);
+      if (/[()\s,;=+\-*\/]/.test(trimmed)) {
+        return true;
+      }
+
+      if (/^[A-Za-z_][\w$#]*(?:\.[A-Za-z_][\w$#]*)?$/.test(trimmed) && isSqlQuotedIdentifierContext(source, start, end)) {
+        return false;
+      }
+
+      const sqlContextToken = /\b(SELECT|FROM|WHERE|UPDATE|INSERT|CREATE|ALTER|MERGE|DELETE|VALUES|SET|CAST|JOIN|ORDER\s+BY|GROUP\s+BY)\b/i;
+      if (sqlContextToken.test(trimmed)) {
+        return true;
+      }
+
+      return true;
     }
 
     function readOracleQuotedLiteral(sql, start) {
@@ -1093,6 +1120,154 @@
       }
 
       return -1;
+    }
+
+    function readSqlProtectedEnd(sql, index) {
+      const rest = sql.slice(index);
+      const char = sql[index];
+
+      if (rest.startsWith("--")) {
+        const end = sql.indexOf("\n", index);
+        return end === -1 ? sql.length : end;
+      }
+
+      if (rest.startsWith("/*")) {
+        const end = sql.indexOf("*/", index + 2);
+        return end === -1 ? sql.length : end + 2;
+      }
+
+      const oracleQuotedEnd = readOracleQuotedLiteral(sql, index);
+      if (oracleQuotedEnd) {
+        return oracleQuotedEnd;
+      }
+
+      const dollarTag = rest.match(/^\$[A-Za-z_][\w$]*\$|^\$\$/);
+      if (dollarTag) {
+        const tag = dollarTag[0];
+        const end = sql.indexOf(tag, index + tag.length);
+        return end === -1 ? sql.length : end + tag.length;
+      }
+
+      if (char === "'" || char === '"') {
+        return readQuoted(sql, index, char);
+      }
+
+      return 0;
+    }
+
+    function findTopLevelRegex(text, pattern, start = 0, end = text.length) {
+      let depth = 0;
+
+      for (let index = start; index < end; index += 1) {
+        const protectedEnd = readSqlProtectedEnd(text, index);
+        if (protectedEnd) {
+          index = protectedEnd - 1;
+          continue;
+        }
+
+        const char = text[index];
+
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === ")") {
+          depth = Math.max(0, depth - 1);
+          continue;
+        }
+
+        if (depth === 0) {
+          const match = text.slice(index, end).match(pattern);
+          const previous = index > 0 ? text[index - 1] : "";
+          if (match && match.index === 0 && !/[\w$#]/.test(previous)) {
+            return {
+              index,
+              end: index + match[0].length,
+              match
+            };
+          }
+        }
+      }
+
+      return null;
+    }
+
+    function findNearestTopLevelRegex(text, patterns, start = 0, end = text.length) {
+      return patterns
+        .map((pattern) => findTopLevelRegex(text, pattern, start, end))
+        .filter(Boolean)
+        .sort((left, right) => left.index - right.index)[0] || null;
+    }
+
+    function findTopLevelEquals(text) {
+      let depth = 0;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const protectedEnd = readSqlProtectedEnd(text, index);
+        if (protectedEnd) {
+          index = protectedEnd - 1;
+          continue;
+        }
+
+        const char = text[index];
+
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === ")") {
+          depth = Math.max(0, depth - 1);
+          continue;
+        }
+
+        if (char === "=" && depth === 0) {
+          return index;
+        }
+      }
+
+      return -1;
+    }
+
+    function splitTopLevelCommaSegments(text) {
+      const segments = [];
+      let depth = 0;
+      let start = 0;
+
+      for (let index = 0; index < text.length; index += 1) {
+        const protectedEnd = readSqlProtectedEnd(text, index);
+        if (protectedEnd) {
+          index = protectedEnd - 1;
+          continue;
+        }
+
+        const char = text[index];
+
+        if (char === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === ")") {
+          depth = Math.max(0, depth - 1);
+          continue;
+        }
+
+        if (char === "," && depth === 0) {
+          segments.push({
+            text: text.slice(start, index),
+            delimiter: ","
+          });
+          start = index + 1;
+        }
+      }
+
+      segments.push({
+        text: text.slice(start),
+        delimiter: ""
+      });
+      return segments;
     }
 
     function escapeRegExp(value) {
@@ -1461,10 +1636,20 @@
       return /^-\d+$/.test(value.trim());
     }
 
+    function isSqlStringLiteral(value) {
+      return /^'(?:''|[^'])*'$/.test(value.trim());
+    }
+
+    function isEmptySqlStringLiteral(value) {
+      return isSqlStringLiteral(value) && unquoteSqlLiteral(value) === "";
+    }
+
     function isNumericLikeExpression(expression) {
       const normalized = expression.trim();
       return isNumericLiteral(normalized)
-        || /^(COUNT|SUM|AVG|MIN|MAX|TO_NUMBER|TRUNC|ROUND)\s*\(/i.test(normalized)
+        || /^(COUNT|SUM|AVG|MIN|MAX|TO_NUMBER|TRUNC|ROUND|NEXTVAL|CURRVAL)\s*\(/i.test(normalized)
+        || /::\s*(?:SMALLINT|INTEGER|INT|BIGINT|NUMERIC|DECIMAL|REAL|DOUBLE\s+PRECISION)\b/i.test(normalized)
+        || /\bCAST\s*\([\s\S]+\s+AS\s+(?:NUMBER|NUMERIC|DECIMAL|SMALLINT|INTEGER|INT|BIGINT|REAL|DOUBLE\s+PRECISION)\s*\)$/i.test(normalized)
         || /\b(amount|amt|price|qty|quantity|count|cnt|num|number|total|sum|rate|score|id)\b/i.test(normalized);
     }
 
@@ -1496,11 +1681,49 @@
       return "'YYYYMMDD'";
     }
 
+    function isDateLikeExpression(expression) {
+      const normalized = expression.trim();
+      return isDateLikeTruncExpression(normalized)
+        || /::\s*(?:DATE|TIMESTAMP|TIMESTAMPTZ)\b/i.test(normalized)
+        || /\bCAST\s*\([\s\S]+\s+AS\s+(?:DATE|TIMESTAMP|TIMESTAMP\s+WITH\s+TIME\s+ZONE|TIMESTAMP\s+WITHOUT\s+TIME\s+ZONE)\s*\)$/i.test(normalized);
+    }
+
+    function isEmptyStringAwareExpression(expression) {
+      return /\bNULLIF\s*\([\s\S]*,\s*''\s*\)/i.test(expression);
+    }
+
+    function nullIfEmpty(expression) {
+      return isEmptyStringAwareExpression(expression)
+        ? expression
+        : `NULLIF(${expression}, '')`;
+    }
+
+    function shouldUseNullIfEmpty(expression, companionArgs = []) {
+      const normalized = expression.trim();
+      if (!normalized || isEmptyStringAwareExpression(normalized)) {
+        return false;
+      }
+      if (isNumericLikeExpression(normalized) || isDateLikeExpression(normalized)) {
+        return false;
+      }
+      if (companionArgs.some((arg) => isSqlStringLiteral(arg) || isEmptySqlStringLiteral(arg))) {
+        return true;
+      }
+      if (companionArgs.some((arg) => isNumericLikeExpression(arg) || isDateLikeExpression(arg))) {
+        return false;
+      }
+      return true;
+    }
+
     function convertNvl(args, argsText, context = {}) {
       if (args.length !== 2) {
         return formatCall("COALESCE", args.length ? args : [argsText], argsText, context);
       }
-      return formatCall("COALESCE", args, argsText, context);
+      const convertedArgs = [...args];
+      if (shouldUseNullIfEmpty(convertedArgs[0], [convertedArgs[1]])) {
+        convertedArgs[0] = nullIfEmpty(convertedArgs[0]);
+      }
+      return formatCall("COALESCE", convertedArgs, argsText, context);
     }
 
     function convertNvl2(args, argsText, context = {}) {
@@ -1508,12 +1731,16 @@
         return `NVL2(${argsText})`;
       }
 
+      const conditionExpression = shouldUseNullIfEmpty(args[0], args.slice(1))
+        ? nullIfEmpty(args[0])
+        : args[0];
+
       if (context.hasMultilineArgs) {
         const indent = context.indent || "";
         const innerIndent = nestedIndentFromArgs(argsText, indent);
-        return `(CASE\n${innerIndent}WHEN ${args[0]} IS NOT NULL THEN ${args[1]}\n${innerIndent}ELSE ${args[2]}\n${indent}END)`;
+        return `(CASE\n${innerIndent}WHEN ${conditionExpression} IS NOT NULL THEN ${args[1]}\n${innerIndent}ELSE ${args[2]}\n${indent}END)`;
       }
-      return `(CASE WHEN ${args[0]} IS NOT NULL THEN ${args[1]} ELSE ${args[2]} END)`;
+      return `(CASE WHEN ${conditionExpression} IS NOT NULL THEN ${args[1]} ELSE ${args[2]} END)`;
     }
 
     function convertDecode(args, argsText, context = {}) {
@@ -1672,7 +1899,10 @@
         return `to_date(${args[0]}, ${normalizeDateFormat(args[1])})`;
       }
       if (args.length === 1) {
-        return formatCall("to_date", [args[0], defaultDateFormat(args[0])], argsText, context);
+        const argument = isSqlStringLiteral(args[0]) && !isEmptySqlStringLiteral(args[0])
+          ? args[0]
+          : nullIfEmpty(args[0]);
+        return formatCall("to_date", [argument, defaultDateFormat(args[0])], argsText, context);
       }
       return `to_date(${argsText})`;
     }
@@ -1691,11 +1921,65 @@
         return `to_number(${argsText})`;
       }
 
-      let argument = args[0];
-      if (/^TRIM\s*\(/i.test(argument.trim())) {
-        argument = `NULLIF(${argument}, '')`;
+      const argument = isSqlStringLiteral(args[0]) && !isEmptySqlStringLiteral(args[0])
+        ? args[0]
+        : nullIfEmpty(args[0]);
+      return formatCall("to_number", [argument, defaultNumberFormat(args[0])], argsText, context);
+    }
+
+    function convertTrimNullPredicates(sql) {
+      const lower = sql.toLowerCase();
+      const ranges = getSqlProtectedRanges(sql);
+      let index = 0;
+      let output = "";
+
+      while (index < sql.length) {
+        const found = lower.indexOf("trim", index);
+        if (found === -1) {
+          output += sql.slice(index);
+          break;
+        }
+
+        const before = found > 0 ? sql[found - 1] : "";
+        const afterNameIndex = found + 4;
+        const after = sql[afterNameIndex] || "";
+
+        if (isProtectedIndex(ranges, found) || /[\w$#]/.test(before) || /\w/.test(after)) {
+          output += sql.slice(index, afterNameIndex);
+          index = afterNameIndex;
+          continue;
+        }
+
+        let cursor = afterNameIndex;
+        while (/\s/.test(sql[cursor] || "")) {
+          cursor += 1;
+        }
+
+        if (sql[cursor] !== "(") {
+          output += sql.slice(index, afterNameIndex);
+          index = afterNameIndex;
+          continue;
+        }
+
+        const close = findClosingParen(sql, cursor);
+        if (close === -1) {
+          output += sql.slice(index);
+          break;
+        }
+
+        const nullPredicate = sql.slice(close + 1).match(/^\s+IS\s+(?:NOT\s+)?NULL\b/i);
+        if (!nullPredicate) {
+          output += sql.slice(index, close + 1);
+          index = close + 1;
+          continue;
+        }
+
+        const trimCall = sql.slice(found, close + 1);
+        output += `${sql.slice(index, found)}${nullIfEmpty(trimCall)}${nullPredicate[0]}`;
+        index = close + 1 + nullPredicate[0].length;
       }
-      return formatCall("to_number", [argument, defaultNumberFormat(argument)], argsText, context);
+
+      return output;
     }
 
     function convertSubstr(args, argsText, context = {}) {
@@ -1845,6 +2129,93 @@
       return output;
     }
 
+    function addMergeMatchedCondition(header, condition) {
+      const match = header.match(/^(\s*WHEN\s+MATCHED\b)([\s\S]*?)\s*$/i);
+      const wrappedCondition = `(${condition.trim()})`;
+
+      if (!match) {
+        return `${header.trimEnd()} AND ${wrappedCondition}`;
+      }
+
+      const existing = match[2].trim().replace(/^AND\b/i, "").trim();
+      if (!existing) {
+        return `${match[1]} AND ${wrappedCondition}`;
+      }
+
+      return `${match[1]} AND (${existing}) AND ${wrappedCondition}`;
+    }
+
+    function convertMergeMatchedUpdateClause(clause, warnings) {
+      if (!/^\s*WHEN\s+MATCHED\b/i.test(clause) || /^\s*WHEN\s+NOT\s+MATCHED\b/i.test(clause)) {
+        return clause;
+      }
+
+      const thenMatch = findTopLevelRegex(clause, /^THEN\b/i);
+      if (!thenMatch) {
+        return clause;
+      }
+
+      const afterThen = clause.slice(thenMatch.end);
+      const updateMatch = afterThen.match(/^\s*UPDATE\s+SET\b/i);
+      if (!updateMatch) {
+        return clause;
+      }
+
+      const actionPrefixEnd = thenMatch.end + updateMatch[0].length;
+      const actionBody = clause.slice(actionPrefixEnd);
+      const deleteMatch = findTopLevelRegex(actionBody, /^DELETE\s+WHERE\b/i);
+      const updateBodyEnd = deleteMatch ? deleteMatch.index : actionBody.length;
+      const updateBody = actionBody.slice(0, updateBodyEnd);
+      const updateWhere = findTopLevelRegex(updateBody, /^WHERE\b/i);
+
+      if (!updateWhere) {
+        return clause;
+      }
+
+      const conditionSource = updateBody.slice(updateWhere.end);
+      const condition = conditionSource.trim();
+      if (!condition) {
+        warnings.push("MERGE の UPDATE SET 後の WHERE 条件が空のため、該当箇所は手動確認してください。");
+        return clause;
+      }
+
+      const header = clause.slice(0, thenMatch.index);
+      const assignments = updateBody.slice(0, updateWhere.index).trimEnd();
+      const trailingWhitespace = conditionSource.match(/\s*$/)?.[0] || "";
+      const deleteTail = deleteMatch ? actionBody.slice(deleteMatch.index) : "";
+
+      return `${addMergeMatchedCondition(header, condition)} THEN${clause.slice(thenMatch.end, actionPrefixEnd)}${assignments}${trailingWhitespace}${deleteTail}`;
+    }
+
+    function convertMergeUpdateWhereClauses(sql, warnings) {
+      return splitSqlStatements(sql).map((statement) => {
+        if (!matchesOutsideSqlLiterals(statement, /\bMERGE\s+INTO\b/i)) {
+          return statement;
+        }
+
+        const semicolonMatch = statement.match(/;\s*$/);
+        const suffix = semicolonMatch ? semicolonMatch[0] : "";
+        const body = semicolonMatch ? statement.slice(0, semicolonMatch.index) : statement;
+        let output = "";
+        let cursor = 0;
+        let whenMatch = findTopLevelRegex(body, /^WHEN\s+(?:NOT\s+)?MATCHED\b/i);
+
+        while (whenMatch) {
+          const nextWhen = findTopLevelRegex(body, /^WHEN\s+(?:NOT\s+)?MATCHED\b/i, whenMatch.end);
+          const clauseEnd = nextWhen ? nextWhen.index : body.length;
+          const clause = body.slice(whenMatch.index, clauseEnd);
+
+          output += body.slice(cursor, whenMatch.index);
+          output += convertMergeMatchedUpdateClause(clause, warnings);
+          cursor = clauseEnd;
+          whenMatch = nextWhen;
+        }
+
+        output += body.slice(cursor);
+        return output + suffix;
+      }).join("");
+    }
+
     function identifierQualifierPattern(identifier) {
       const unquoted = stripIdentifierQuotes(identifier.trim());
       return `"${escapeRegExp(unquoted)}"|${escapeRegExp(unquoted)}`;
@@ -1870,6 +2241,49 @@
       return next;
     }
 
+    function removeAssignmentTargetQualifier(assignment, qualifiers) {
+      const equalIndex = findTopLevelEquals(assignment);
+      if (equalIndex === -1) {
+        return assignment;
+      }
+
+      const left = assignment.slice(0, equalIndex);
+      const right = assignment.slice(equalIndex);
+      const leftMatch = left.match(/^(\s*)([\s\S]*?)(\s*)$/);
+      if (!leftMatch) {
+        return assignment;
+      }
+
+      return `${leftMatch[1]}${removeColumnQualifier(leftMatch[2], qualifiers)}${leftMatch[3]}${right}`;
+    }
+
+    function removeMergeUpdateAssignmentQualifiers(statement, qualifiers) {
+      const clauseEndPatterns = [
+        /^WHERE\b/i,
+        /^DELETE\s+WHERE\b/i,
+        /^WHEN\s+(?:NOT\s+)?MATCHED\b/i
+      ];
+      let output = "";
+      let cursor = 0;
+      let updateMatch = findTopLevelRegex(statement, /^UPDATE\s+SET\b/i);
+
+      while (updateMatch) {
+        const nextClause = findNearestTopLevelRegex(statement, clauseEndPatterns, updateMatch.end);
+        const assignmentsEnd = nextClause ? nextClause.index : statement.length;
+        const assignments = statement.slice(updateMatch.end, assignmentsEnd);
+        const convertedAssignments = splitTopLevelCommaSegments(assignments)
+          .map((segment) => `${removeAssignmentTargetQualifier(segment.text, qualifiers)}${segment.delimiter}`)
+          .join("");
+
+        output += statement.slice(cursor, updateMatch.end) + convertedAssignments;
+        cursor = assignmentsEnd;
+        updateMatch = findTopLevelRegex(statement, /^UPDATE\s+SET\b/i, cursor);
+      }
+
+      output += statement.slice(cursor);
+      return output;
+    }
+
     function convertMergeTargetQualifiers(sql) {
       return splitSqlStatements(sql).map((statement) => {
         const mergeMatch = statement.match(/\bMERGE\s+INTO\s+((?:"[^"]+"|[A-Za-z_][\w$#]*)(?:\s*\.\s*(?:"[^"]+"|[A-Za-z_][\w$#]*))?)(?:\s+(?:AS\s+)?("[^"]+"|[A-Za-z_][\w$#]*))?\s+USING\b/i);
@@ -1882,15 +2296,7 @@
         const qualifiers = [targetAlias, tableBaseName(targetTable)];
         let next = statement;
 
-        qualifiers.forEach((qualifier) => {
-          if (!qualifier) {
-            return;
-          }
-          const assignmentPattern = new RegExp(`\\b(${identifierQualifierPattern(qualifier)})\\s*\\.\\s*((?:"[^"]+"|[A-Za-z_][\\w$#]*))\\s*=`, "gi");
-          next = next.replace(/\bUPDATE\s+SET\b([\s\S]*?)(?=\bWHEN\s+NOT\s+MATCHED\b|\bWHEN\s+MATCHED\b|;$|$)/gi, (full, body) => {
-            return `UPDATE SET${body.replace(assignmentPattern, "$2 =")}`;
-          });
-        });
+        next = removeMergeUpdateAssignmentQualifiers(next, qualifiers);
 
         next = next.replace(/\bINSERT\s*\(([\s\S]*?)\)/gi, (_, columns) => {
           const convertedColumns = splitArgs(columns)
@@ -2054,8 +2460,7 @@
         [/\bREGEXP_LIKE\s*\(/i, "REGEXP_LIKE はパターン互換性を個別確認してください。"],
         [/\bTO_MULTI_BYTE\s*\(/i, "TO_MULTI_BYTE はPostgreSQL側の関数定義を確認してください。"],
         [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"],
-        [/\|\|/i, "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を確認してください。"],
-        [/\bTRIM\s*\([^)]*\)\s+IS\s+NULL\b/i, "TRIM結果のNULL判定は NULLIF(TRIM(...), '') IS NULL への変更要否を確認してください。"]
+        [/\|\|/i, "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を確認してください。"]
       ];
 
       checks.forEach(([pattern, message]) => {
@@ -2111,7 +2516,9 @@
       sql = replaceFunctionCalls(sql, "SUBSTR", convertSubstr, conversionWarnings);
       sql = replaceFunctionCalls(sql, "LPAD", convertLpad, conversionWarnings);
       sql = replaceFunctionCalls(sql, "LAST_DAY", convertLastDay, conversionWarnings);
+      sql = convertTrimNullPredicates(sql);
       sql = convertMergeUsingDual(sql, conversionWarnings);
+      sql = convertMergeUpdateWhereClauses(sql, conversionWarnings);
       sql = convertMergeTargetQualifiers(sql);
       sql = convertUpdateSetQualifiers(sql);
       sql = removeDual(sql);
@@ -2179,7 +2586,7 @@
           const quoted = readDoubleQuotedContent(input, index);
           const decoded = decodeDoubleQuotedContent(quoted.raw);
 
-          if (isLikelyEmbeddedSqlString(decoded.text)) {
+          if (isLikelyEmbeddedSqlString(decoded.text, input, index, quoted.end)) {
             const result = convertOracleSqlContent(decoded.text);
             warnings.push(...result.warnings.map((warning) => `ダブルクォート内SQL: ${warning}`));
             output += `"${encodeDoubleQuotedContent(result.sql, decoded.quoteStyle)}"`;
