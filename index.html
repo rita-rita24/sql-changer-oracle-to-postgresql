@@ -854,6 +854,10 @@
       return ranges.some((range) => index >= range.start && index < range.end);
     }
 
+    function protectedRangeAt(ranges, index) {
+      return ranges.find((range) => index >= range.start && index < range.end) || null;
+    }
+
     function expandReplacement(match, captures, replacement) {
       return replacement.replace(/\$\$|\$&|\$(\d{1,2})/g, (token, indexText) => {
         if (token === "$$") {
@@ -1715,6 +1719,276 @@
       return true;
     }
 
+    function isFixedConcatOperand(expression) {
+      const normalized = expression.trim();
+      return isSqlStringLiteral(normalized)
+        || isNumericLiteral(normalized)
+        || /^(DATE|TIMESTAMP)\s*'(?:''|[^'])*'$/i.test(normalized)
+        || /^CURRENT_(?:DATE|TIMESTAMP)$/i.test(normalized)
+        || /^CLOCK_TIMESTAMP\s*\(\s*\)$/i.test(normalized)
+        || /^LOCALTIMESTAMP$/i.test(normalized);
+    }
+
+    function shouldCoalesceConcatOperand(expression) {
+      const normalized = expression.trim();
+      if (!normalized || isFixedConcatOperand(normalized) || isEmptyStringAwareExpression(normalized)) {
+        return false;
+      }
+      if (/^COALESCE\s*\(/i.test(normalized)) {
+        return false;
+      }
+      if (isNumericLikeExpression(normalized) || isDateLikeExpression(normalized)) {
+        return false;
+      }
+      return true;
+    }
+
+    function findOpeningParenBackward(text, closeIndex) {
+      let depth = 0;
+      let quote = "";
+
+      for (let i = closeIndex; i >= 0; i -= 1) {
+        const char = text[i];
+        const previous = text[i - 1];
+
+        if (quote) {
+          if (char === quote) {
+            if (previous === quote) {
+              i -= 1;
+            } else {
+              quote = "";
+            }
+          }
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          quote = char;
+          continue;
+        }
+
+        if (char === ")") {
+          depth += 1;
+          continue;
+        }
+
+        if (char === "(") {
+          depth -= 1;
+          if (depth === 0) {
+            return i;
+          }
+        }
+      }
+
+      return -1;
+    }
+
+    function includeFunctionNameBeforeParen(text, openIndex, ranges) {
+      let cursor = openIndex - 1;
+      while (/\s/.test(text[cursor] || "")) {
+        cursor -= 1;
+      }
+
+      let start = cursor + 1;
+      while (cursor >= 0) {
+        const range = protectedRangeAt(ranges, cursor);
+        if (range && text[range.start] === '"') {
+          start = range.start;
+          cursor = range.start - 1;
+          if (text[cursor] === ".") {
+            start = cursor;
+            cursor -= 1;
+            continue;
+          }
+          break;
+        }
+
+        if (/[\w$#.]/.test(text[cursor] || "")) {
+          start = cursor;
+          cursor -= 1;
+          continue;
+        }
+        break;
+      }
+
+      return start < openIndex ? start : openIndex;
+    }
+
+    function readQualifiedIdentifierEnd(text, start, ranges) {
+      let cursor = start;
+      while (cursor < text.length) {
+        const range = protectedRangeAt(ranges, cursor);
+        if (range && text[range.start] === '"') {
+          cursor = range.end;
+          continue;
+        }
+        if (/[A-Za-z0-9_$#.]/.test(text[cursor] || "")) {
+          cursor += 1;
+          continue;
+        }
+        break;
+      }
+      return cursor;
+    }
+
+    function readConcatOperandStart(text, operatorIndex, ranges) {
+      let cursor = operatorIndex - 1;
+      while (/\s/.test(text[cursor] || "")) {
+        cursor -= 1;
+      }
+
+      const range = protectedRangeAt(ranges, cursor);
+      if (range) {
+        let start = range.start;
+        if (text[range.start] === '"' && text[start - 1] === ".") {
+          start = includeFunctionNameBeforeParen(text, start, ranges);
+        }
+        return start;
+      }
+
+      if (text[cursor] === ")") {
+        const openIndex = findOpeningParenBackward(text, cursor);
+        return openIndex === -1 ? cursor : includeFunctionNameBeforeParen(text, openIndex, ranges);
+      }
+
+      let start = cursor + 1;
+      while (cursor >= 0 && /[A-Za-z0-9_$#.:"]/.test(text[cursor] || "")) {
+        start = cursor;
+        cursor -= 1;
+      }
+      return start;
+    }
+
+    function readConcatOperandEnd(text, start, ranges) {
+      let cursor = start;
+      while (/\s/.test(text[cursor] || "")) {
+        cursor += 1;
+      }
+
+      const range = protectedRangeAt(ranges, cursor);
+      if (range) {
+        return range.end;
+      }
+
+      if (text[cursor] === "(") {
+        const closeIndex = findClosingParen(text, cursor);
+        return closeIndex === -1 ? cursor + 1 : closeIndex + 1;
+      }
+
+      cursor = readQualifiedIdentifierEnd(text, cursor, ranges);
+      let lookahead = cursor;
+      while (/\s/.test(text[lookahead] || "")) {
+        lookahead += 1;
+      }
+      if (text[lookahead] === "(") {
+        const closeIndex = findClosingParen(text, lookahead);
+        return closeIndex === -1 ? cursor : closeIndex + 1;
+      }
+
+      if (cursor === start) {
+        while (cursor < text.length && !/[\s,;=<>+\-*\/%()[\]]/.test(text[cursor] || "")) {
+          cursor += 1;
+        }
+      }
+      return cursor;
+    }
+
+    function nextConcatOperator(text, operandEnd, ranges) {
+      let cursor = operandEnd;
+      while (/\s/.test(text[cursor] || "")) {
+        cursor += 1;
+      }
+      return text.slice(cursor, cursor + 2) === "||" && !isProtectedIndex(ranges, cursor)
+        ? cursor
+        : -1;
+    }
+
+    function coalesceConcatOperand(part) {
+      const match = part.match(/^(\s*)([\s\S]*?)(\s*)$/);
+      const leading = match?.[1] || "";
+      const expression = match?.[2] || part;
+      const trailing = match?.[3] || "";
+      if (!shouldCoalesceConcatOperand(expression)) {
+        return part;
+      }
+      return `${leading}COALESCE(${expression}, '')${trailing}`;
+    }
+
+    function convertConcatChain(chain) {
+      const ranges = getSqlProtectedRanges(chain);
+      const parts = [];
+      const operators = [];
+      let start = 0;
+      let depth = 0;
+
+      for (let i = 0; i < chain.length; i += 1) {
+        const range = protectedRangeAt(ranges, i);
+        if (range) {
+          i = range.end - 1;
+          continue;
+        }
+
+        if (chain[i] === "(") {
+          depth += 1;
+          continue;
+        }
+        if (chain[i] === ")") {
+          depth = Math.max(0, depth - 1);
+          continue;
+        }
+        if (depth === 0 && chain.slice(i, i + 2) === "||") {
+          parts.push(chain.slice(start, i));
+          operators.push("||");
+          i += 1;
+          start = i + 1;
+        }
+      }
+
+      parts.push(chain.slice(start));
+      return parts
+        .map((part, index) => `${coalesceConcatOperand(part)}${operators[index] || ""}`)
+        .join("");
+    }
+
+    function convertStringConcatenation(sql) {
+      const ranges = getSqlProtectedRanges(sql);
+      let output = "";
+      let cursor = 0;
+      let index = 0;
+
+      while (index < sql.length) {
+        if (sql.slice(index, index + 2) !== "||" || isProtectedIndex(ranges, index)) {
+          index += 1;
+          continue;
+        }
+
+        const chainStart = readConcatOperandStart(sql, index, ranges);
+        if (chainStart < cursor) {
+          index += 2;
+          continue;
+        }
+
+        let operatorIndex = index;
+        let chainEnd = readConcatOperandEnd(sql, operatorIndex + 2, ranges);
+        while (true) {
+          const nextOperator = nextConcatOperator(sql, chainEnd, ranges);
+          if (nextOperator === -1) {
+            break;
+          }
+          operatorIndex = nextOperator;
+          chainEnd = readConcatOperandEnd(sql, operatorIndex + 2, ranges);
+        }
+
+        output += sql.slice(cursor, chainStart);
+        output += convertConcatChain(sql.slice(chainStart, chainEnd));
+        cursor = chainEnd;
+        index = chainEnd;
+      }
+
+      output += sql.slice(cursor);
+      return output;
+    }
+
     function convertNvl(args, argsText, context = {}) {
       if (args.length !== 2) {
         return formatCall("COALESCE", args.length ? args : [argsText], argsText, context);
@@ -2435,8 +2709,7 @@
         [/\bREGEXP_SUBSTR\s*\(/i, "REGEXP_SUBSTR は検索開始位置とパターン互換性を個別確認してください。"],
         [/\bREGEXP_LIKE\s*\(/i, "REGEXP_LIKE はパターン互換性を個別確認してください。"],
         [/\bTO_MULTI_BYTE\s*\(/i, "TO_MULTI_BYTE はPostgreSQL側の関数定義を確認してください。"],
-        [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"],
-        [/\|\|/i, "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を確認してください。"]
+        [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"]
       ];
 
       checks.forEach(([pattern, message]) => {
@@ -2493,6 +2766,7 @@
       sql = replaceFunctionCalls(sql, "LPAD", convertLpad, conversionWarnings);
       sql = replaceFunctionCalls(sql, "LAST_DAY", convertLastDay, conversionWarnings);
       sql = convertTrimNullPredicates(sql);
+      sql = convertStringConcatenation(sql);
       sql = convertMergeUsingDual(sql, conversionWarnings);
       sql = convertMergeUpdateWhereClauses(sql, conversionWarnings);
       sql = convertMergeTargetQualifiers(sql);
