@@ -2037,7 +2037,7 @@
         /\bSYSDATE\s*([+-])\s*(\d+(?:\.\d+)?)\b/gi,
         (_, operator, days) => `CLOCK_TIMESTAMP() ${operator} INTERVAL '${days} day'`
       );
-      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CURRENT_TIMESTAMP");
+      next = replaceOutsideSqlLiterals(next, /\bSYSTIMESTAMP\b/gi, "CLOCK_TIMESTAMP()");
       next = replaceOutsideSqlLiterals(next, /\bSYSDATE\b/gi, "CLOCK_TIMESTAMP()");
       return next;
     }
@@ -2514,26 +2514,186 @@
       return false;
     }
 
+    function hasOracleQuotedLiteral(sql) {
+      let index = 0;
+
+      while (index < sql.length) {
+        const rest = sql.slice(index);
+
+        if (rest.startsWith("--")) {
+          const end = sql.indexOf("\n", index);
+          index = end === -1 ? sql.length : end + 1;
+          continue;
+        }
+
+        if (rest.startsWith("/*")) {
+          const end = sql.indexOf("*/", index + 2);
+          index = end === -1 ? sql.length : end + 2;
+          continue;
+        }
+
+        if (rest.slice(0, 2).toLowerCase() === "q'") {
+          return true;
+        }
+
+        if (sql[index] === "'" || sql[index] === '"') {
+          index = readQuoted(sql, index, sql[index]);
+          continue;
+        }
+
+        index += 1;
+      }
+
+      return false;
+    }
+
+    function hasUnterminatedSqlDelimiter(sql) {
+      let index = 0;
+
+      while (index < sql.length) {
+        const rest = sql.slice(index);
+        const char = sql[index];
+
+        if (rest.startsWith("--")) {
+          const end = sql.indexOf("\n", index);
+          index = end === -1 ? sql.length : end + 1;
+          continue;
+        }
+
+        if (rest.startsWith("/*")) {
+          return sql.indexOf("*/", index + 2) === -1;
+        }
+
+        if (rest.slice(0, 2).toLowerCase() === "q'") {
+          const opener = sql[index + 2];
+          if (!opener) {
+            return true;
+          }
+          const pairs = {
+            "[": "]",
+            "(": ")",
+            "{": "}",
+            "<": ">"
+          };
+          const closer = pairs[opener] || opener;
+          const terminator = `${closer}'`;
+          const end = sql.indexOf(terminator, index + 3);
+          if (end === -1) {
+            return true;
+          }
+          index = end + terminator.length;
+          continue;
+        }
+
+        const dollarTag = rest.match(/^\$[A-Za-z_][\w$]*\$|^\$\$/);
+        if (dollarTag) {
+          const tag = dollarTag[0];
+          const end = sql.indexOf(tag, index + tag.length);
+          if (end === -1) {
+            return true;
+          }
+          index = end + tag.length;
+          continue;
+        }
+
+        if (char === "'" || char === '"') {
+          const end = readQuoted(sql, index, char);
+          if (end === sql.length && sql[sql.length - 1] !== char) {
+            return true;
+          }
+          index = end;
+          continue;
+        }
+
+        index += 1;
+      }
+
+      return false;
+    }
+
+    function hasUnbalancedParentheses(sql) {
+      let depth = 0;
+
+      for (let index = 0; index < sql.length; index += 1) {
+        const protectedEnd = readSqlProtectedEnd(sql, index);
+        if (protectedEnd) {
+          index = protectedEnd - 1;
+          continue;
+        }
+
+        if (sql[index] === "(") {
+          depth += 1;
+          continue;
+        }
+
+        if (sql[index] === ")") {
+          if (depth === 0) {
+            return true;
+          }
+          depth -= 1;
+        }
+      }
+
+      return depth !== 0;
+    }
+
     function collectWarnings(original, converted) {
       const warnings = [];
 
       const checks = [
         [/\(\+\)/, "Oracle 外部結合記法 (+) は JOIN へ手動変換してください。"],
         [/\bCONNECT\s+BY\b/i, "CONNECT BY / START WITH 階層問い合わせは WITH RECURSIVE へ手動変換してください。"],
+        [/\bSTART\s+WITH\b/i, "START WITH はOracle階層問い合わせ構文のため、WITH RECURSIVEへ手動変換してください。"],
+        [/\bPRIOR\b/i, "PRIOR はOracle階層問い合わせ構文のため、WITH RECURSIVEへ手動変換してください。"],
+        [/\bORDER\s+SIBLINGS\s+BY\b/i, "ORDER SIBLINGS BY はPostgreSQL 15.17にないため、階層問い合わせの並び順を手動確認してください。"],
         [/\bCREATE\s+OR\s+REPLACE\s+TRIGGER\b/i, "Oracle トリガーは PL/pgSQL 形式へ手動変換してください。"],
+        [/\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:FUNCTION|PROCEDURE)\b/i, "Oracle PL/SQLのFUNCTION/PROCEDUREはPostgreSQL 15.17のPL/pgSQL構文へ手動変換してください。"],
+        [/(^|;)\s*(?:DECLARE\b[\s\S]*?\bBEGIN\b|BEGIN\b[\s\S]*?\bEND\s*;?)/i, "Oracle無名PL/SQLブロックはPostgreSQL 15.17ではDO $$ ... $$などへ手動変換してください。"],
+        [/\bEXECUTE\s+IMMEDIATE\b/i, "EXECUTE IMMEDIATE はOracle PL/SQL構文のため、PostgreSQLのEXECUTE形式へ手動変換してください。"],
         [/\bPACKAGE\b/i, "Oracle PACKAGE は PostgreSQL に直接対応しません。"],
         [/\bPRAGMA\b/i, "PRAGMA は PostgreSQL に直接対応しません。"],
         [/\bDBMS_[A-Z0-9_]+\b/i, "DBMS_* パッケージ呼び出しは手動変換してください。"],
         [/\bBULK\s+COLLECT\b/i, "BULK COLLECT は PL/pgSQL の実装へ置き換えてください。"],
         [/\bFORALL\b/i, "FORALL は PostgreSQL に直接対応しません。"],
+        [/\bINSERT\s+(?:ALL|FIRST)\b/i, "INSERT ALL/FIRST はOracle複数表INSERT構文のため、PostgreSQL 15.17向けに複数INSERT等へ手動変換してください。"],
+        [/\bPIVOT\b|\bUNPIVOT\b/i, "PIVOT/UNPIVOT はPostgreSQL 15.17にない構文のため、集計CASEやcrosstab等へ手動変換してください。"],
+        [/\bMODEL\b/i, "MODEL句はPostgreSQL 15.17にないため、SQLまたはアプリ側ロジックへ手動変換してください。"],
+        [/\bMATCH_RECOGNIZE\b/i, "MATCH_RECOGNIZE句はPostgreSQL 15.17にないため、手動変換してください。"],
+        [/\bSAMPLE\s*\(/i, "Oracle SAMPLE句はPostgreSQL 15.17のTABLESAMPLE等とは構文が異なるため、手動確認してください。"],
+        [/\bVERSIONS\s+BETWEEN\b|\bAS\s+OF\s+(?:SCN|TIMESTAMP)\b/i, "Oracle Flashback Query構文はPostgreSQL 15.17にないため、履歴テーブル等へ手動変換してください。"],
         [/\bROWID\b/i, "ROWID は ctid などへの置換可否を手動確認してください。"],
         [/\bSYSDATE\s*[-+]\s*(?!\d+(?:\.\d+)?\b)/i, "SYSDATE の数値以外の加減算は interval へ手動確認してください。"],
         [/\bALTER\s+TABLE\b[\s\S]*?\bMODIFY\b/i, "ALTER TABLE MODIFY は ALTER COLUMN へ手動変換してください。"],
+        [/\bALTER\s+(?:SESSION|SYSTEM)\b/i, "ALTER SESSION/ALTER SYSTEM はOracle管理構文のため、PostgreSQL 15.17では設定方法を手動確認してください。"],
+        [/\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:PUBLIC\s+)?SYNONYM\b/i, "SYNONYMはPostgreSQL 15.17にないため、search_path・VIEW・スキーマ修正等を手動検討してください。"],
+        [/\bCREATE\s+(?:SHARED\s+)?DATABASE\s+LINK\b/i, "DATABASE LINKはPostgreSQL 15.17にないため、postgres_fdw等への手動変換を検討してください。"],
+        [/\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:TYPE|TYPE\s+BODY)\b/i, "Oracle TYPE/TYPE BODYはPostgreSQL 15.17の型定義や関数へ手動変換してください。"],
+        [/\bCREATE\s+(?:OR\s+REPLACE\s+)?FORCE\s+VIEW\b/i, "CREATE FORCE VIEWはPostgreSQL 15.17にないため、FORCE指定を外せるか手動確認してください。"],
+        [/\bCREATE\s+BITMAP\s+INDEX\b/i, "BITMAP INDEXはPostgreSQL 15.17にないため、通常INDEXや部分INDEX等へ手動変換してください。"],
+        [/\bCREATE\s+MATERIALIZED\s+VIEW\b[\s\S]*\b(?:BUILD|REFRESH)\b/i, "Oracle MATERIALIZED VIEWのBUILD/REFRESH句はPostgreSQL 15.17と構文が異なるため手動確認してください。"],
+        [/\bPARTITION\s+BY\b/i, "Oracle PARTITION BY句はPostgreSQL 15.17のパーティション定義と構文が異なる場合があるため手動確認してください。"],
+        [/\bLOB\s*\([^)]*\)\s+STORE\s+AS\b/i, "LOB ... STORE AS はOracle記憶域構文のため、PostgreSQL 15.17では削除または別設計を手動確認してください。"],
+        [/\bORGANIZATION\s+INDEX\b/i, "ORGANIZATION INDEXはOracle索引構成表構文のため、PostgreSQL 15.17向けにテーブル/INDEX設計を手動確認してください。"],
+        [/\bDEFAULT\s+ON\s+NULL\b/i, "DEFAULT ON NULLはPostgreSQL 15.17にないため、DEFAULTとNULL制御を手動変換してください。"],
+        [/\bGENERATED\s+ALWAYS\s+AS\s*\([^)]*\)\s+VIRTUAL\b/i, "Oracle仮想列(VIRTUAL)はPostgreSQL 15.17では生成列STORED等へ手動変換してください。"],
+        [/\bTIMESTAMP\s+WITH\s+LOCAL\s+TIME\s+ZONE\b/i, "TIMESTAMP WITH LOCAL TIME ZONEはPostgreSQL 15.17に直接対応しないため、timestamptz等へ手動確認してください。"],
+        [/\bBFILE\b|\bXMLTYPE\b|\bUROWID\b/i, "Oracle固有データ型(BFILE/XMLTYPE/UROWID)はPostgreSQL 15.17向けに手動変換してください。"],
         [/\bVARCHAR2\s*\([^)]*\s+CHAR\s*\)/i, "VARCHAR2(... CHAR) の文字数セマンティクスは PostgreSQL 側で確認してください。"],
         [/\bSUBSTRB\s*\(/i, "SUBSTRB はバイト単位の切り出しのため、マルチバイト有無を含めて個別確認してください。"],
         [/\bREGEXP_SUBSTR\s*\(/i, "REGEXP_SUBSTR は検索開始位置とパターン互換性を個別確認してください。"],
         [/\bREGEXP_LIKE\s*\(/i, "REGEXP_LIKE はパターン互換性を個別確認してください。"],
         [/\bTO_MULTI_BYTE\s*\(/i, "TO_MULTI_BYTE はPostgreSQL側の関数定義を確認してください。"],
+        [/\bRETURNING\b[\s\S]*?\bINTO\b/i, "Oracle DMLのRETURNING ... INTOはPostgreSQL通常SQLでは構文が異なるため、呼び出し側またはPL/pgSQL側で手動確認してください。"],
+        [/\bFOR\s+UPDATE\s+OF\b/i, "FOR UPDATE OFはPostgreSQL 15.17では列指定ではなくテーブル/別名指定になるため、手動確認してください。"],
+        [/\bLOCK\s+TABLE\b[\s\S]*?\bIN\s+\w+(?:\s+\w+)*\s+MODE\b/i, "Oracle LOCK TABLE ... IN ... MODEはPostgreSQL 15.17のLOCK構文へ手動変換してください。"],
+        [/\bTRUNCATE\s+TABLE\b[\s\S]*\b(?:DROP|REUSE)\s+STORAGE\b/i, "TRUNCATEのDROP/REUSE STORAGEはOracle構文のためPostgreSQL 15.17では削除してください。"],
+        [/(^|[^:]):(?:[A-Za-z_][\w$#]*|\d+)\b/, "Oracle形式のバインド変数(:name/:1)はPostgreSQLサーバ構文ではないため、利用DBクライアント/フレームワークの形式へ手動確認してください。"],
+        [/&&?[A-Za-z_][\w$#]*\b/, "SQL*Plus置換変数(&name/&&name)はPostgreSQL 15.17のSQL構文ではないため、手動置換してください。"],
+        [/^\s*(?:PROMPT|SET\s+DEFINE|SET\s+SERVEROUTPUT|WHENEVER\s+SQLERROR|SPOOL|DEFINE|UNDEFINE|ACCEPT|COLUMN)\b/im, "SQL*PlusコマンドはPostgreSQL 15.17のSQL構文ではないため、実行スクリプト側で手動変換してください。"],
+        [/^\s*@@?\S+/im, "SQL*Plusの@/@@スクリプト実行構文はPostgreSQL 15.17のSQL構文ではないため、psql等の実行方法へ手動変換してください。"],
+        [/(^|\n)\s*\/\s*(?=\n|$)/, "PL/SQL終端の単独スラッシュ(/)はPostgreSQL 15.17のSQL構文ではないため削除または実行方法を手動確認してください。"],
+        [/\bLOAD\s+DATA\b|\bINFILE\b[\s\S]*\bINTO\s+TABLE\b/i, "SQL*Loader制御構文はPostgreSQL 15.17ではCOPY等へ手動変換してください。"],
+        [/\u3000/, "SQL内に全角スペースがあります。PostgreSQL実行前に半角スペースへ修正してください。"],
         [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"],
         [/\|\|/, "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を手動確認してください。"]
       ];
@@ -2554,6 +2714,18 @@
 
       if (matchesOutsideSqlLiterals(converted, /\bFROM\s+(?:SYS\.)?DUAL\b/i)) {
         warnings.push("FROM DUAL が残っています。該当箇所を確認してください。");
+      }
+
+      if (hasOracleQuotedLiteral(original)) {
+        warnings.push("Oracle q'[...]' 形式の引用リテラルはPostgreSQL 15.17構文ではないため、通常の文字列リテラルへ手動変換してください。");
+      }
+
+      if (hasUnterminatedSqlDelimiter(original)) {
+        warnings.push("SQLの引用符、ドルクォート、またはブロックコメントが閉じていない可能性があります。");
+      }
+
+      if (hasUnbalancedParentheses(original)) {
+        warnings.push("SQLの括弧の対応が崩れている可能性があります。");
       }
 
       if (hasDerivedTableWithoutAlias(converted)) {
