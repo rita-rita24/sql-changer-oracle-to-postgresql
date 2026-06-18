@@ -494,7 +494,7 @@
             <span class="dot" aria-hidden="true"></span>
             <span class="status-text" id="outputStatus">未変換</span>
           </div>
-          <span>PostgreSQL</span>
+          <span id="postgresVersionLabel">PostgreSQL 15.17</span>
         </div>
       </section>
     </main>
@@ -523,6 +523,9 @@
     const warningsList = document.getElementById("warningsList");
     const toast = document.getElementById("toast");
     const highlightTokenizeLimit = 120000;
+    const targetPostgresVersion = "15.17";
+    const targetPostgresMajorVersion = Number(targetPostgresVersion.split(".")[0]);
+    const targetPostgresLabel = `PostgreSQL ${targetPostgresVersion}`;
 
     const simpleReplacements = [
       [/\bVARCHAR2\s*\(/gi, "VARCHAR("],
@@ -860,10 +863,6 @@
 
     function isProtectedIndex(ranges, index) {
       return ranges.some((range) => index >= range.start && index < range.end);
-    }
-
-    function protectedRangeAt(ranges, index) {
-      return ranges.find((range) => index >= range.start && index < range.end) || null;
     }
 
     function expandReplacement(match, captures, replacement) {
@@ -1727,276 +1726,6 @@
       return true;
     }
 
-    function isFixedConcatOperand(expression) {
-      const normalized = expression.trim();
-      return isSqlStringLiteral(normalized)
-        || isNumericLiteral(normalized)
-        || /^(DATE|TIMESTAMP)\s*'(?:''|[^'])*'$/i.test(normalized)
-        || /^CURRENT_(?:DATE|TIMESTAMP)$/i.test(normalized)
-        || /^CLOCK_TIMESTAMP\s*\(\s*\)$/i.test(normalized)
-        || /^LOCALTIMESTAMP$/i.test(normalized);
-    }
-
-    function shouldCoalesceConcatOperand(expression) {
-      const normalized = expression.trim();
-      if (!normalized || isFixedConcatOperand(normalized) || isEmptyStringAwareExpression(normalized)) {
-        return false;
-      }
-      if (/^COALESCE\s*\(/i.test(normalized)) {
-        return false;
-      }
-      if (isNumericLikeExpression(normalized) || isDateLikeExpression(normalized)) {
-        return false;
-      }
-      return true;
-    }
-
-    function findOpeningParenBackward(text, closeIndex) {
-      let depth = 0;
-      let quote = "";
-
-      for (let i = closeIndex; i >= 0; i -= 1) {
-        const char = text[i];
-        const previous = text[i - 1];
-
-        if (quote) {
-          if (char === quote) {
-            if (previous === quote) {
-              i -= 1;
-            } else {
-              quote = "";
-            }
-          }
-          continue;
-        }
-
-        if (char === "'" || char === '"') {
-          quote = char;
-          continue;
-        }
-
-        if (char === ")") {
-          depth += 1;
-          continue;
-        }
-
-        if (char === "(") {
-          depth -= 1;
-          if (depth === 0) {
-            return i;
-          }
-        }
-      }
-
-      return -1;
-    }
-
-    function includeFunctionNameBeforeParen(text, openIndex, ranges) {
-      let cursor = openIndex - 1;
-      while (/\s/.test(text[cursor] || "")) {
-        cursor -= 1;
-      }
-
-      let start = cursor + 1;
-      while (cursor >= 0) {
-        const range = protectedRangeAt(ranges, cursor);
-        if (range && text[range.start] === '"') {
-          start = range.start;
-          cursor = range.start - 1;
-          if (text[cursor] === ".") {
-            start = cursor;
-            cursor -= 1;
-            continue;
-          }
-          break;
-        }
-
-        if (/[\w$#.]/.test(text[cursor] || "")) {
-          start = cursor;
-          cursor -= 1;
-          continue;
-        }
-        break;
-      }
-
-      return start < openIndex ? start : openIndex;
-    }
-
-    function readQualifiedIdentifierEnd(text, start, ranges) {
-      let cursor = start;
-      while (cursor < text.length) {
-        const range = protectedRangeAt(ranges, cursor);
-        if (range && text[range.start] === '"') {
-          cursor = range.end;
-          continue;
-        }
-        if (/[A-Za-z0-9_$#.]/.test(text[cursor] || "")) {
-          cursor += 1;
-          continue;
-        }
-        break;
-      }
-      return cursor;
-    }
-
-    function readConcatOperandStart(text, operatorIndex, ranges) {
-      let cursor = operatorIndex - 1;
-      while (/\s/.test(text[cursor] || "")) {
-        cursor -= 1;
-      }
-
-      const range = protectedRangeAt(ranges, cursor);
-      if (range) {
-        let start = range.start;
-        if (text[range.start] === '"' && text[start - 1] === ".") {
-          start = includeFunctionNameBeforeParen(text, start, ranges);
-        }
-        return start;
-      }
-
-      if (text[cursor] === ")") {
-        const openIndex = findOpeningParenBackward(text, cursor);
-        return openIndex === -1 ? cursor : includeFunctionNameBeforeParen(text, openIndex, ranges);
-      }
-
-      let start = cursor + 1;
-      while (cursor >= 0 && /[A-Za-z0-9_$#.:"]/.test(text[cursor] || "")) {
-        start = cursor;
-        cursor -= 1;
-      }
-      return start;
-    }
-
-    function readConcatOperandEnd(text, start, ranges) {
-      let cursor = start;
-      while (/\s/.test(text[cursor] || "")) {
-        cursor += 1;
-      }
-
-      const range = protectedRangeAt(ranges, cursor);
-      if (range) {
-        return range.end;
-      }
-
-      if (text[cursor] === "(") {
-        const closeIndex = findClosingParen(text, cursor);
-        return closeIndex === -1 ? cursor + 1 : closeIndex + 1;
-      }
-
-      cursor = readQualifiedIdentifierEnd(text, cursor, ranges);
-      let lookahead = cursor;
-      while (/\s/.test(text[lookahead] || "")) {
-        lookahead += 1;
-      }
-      if (text[lookahead] === "(") {
-        const closeIndex = findClosingParen(text, lookahead);
-        return closeIndex === -1 ? cursor : closeIndex + 1;
-      }
-
-      if (cursor === start) {
-        while (cursor < text.length && !/[\s,;=<>+\-*\/%()[\]]/.test(text[cursor] || "")) {
-          cursor += 1;
-        }
-      }
-      return cursor;
-    }
-
-    function nextConcatOperator(text, operandEnd, ranges) {
-      let cursor = operandEnd;
-      while (/\s/.test(text[cursor] || "")) {
-        cursor += 1;
-      }
-      return text.slice(cursor, cursor + 2) === "||" && !isProtectedIndex(ranges, cursor)
-        ? cursor
-        : -1;
-    }
-
-    function coalesceConcatOperand(part) {
-      const match = part.match(/^(\s*)([\s\S]*?)(\s*)$/);
-      const leading = match?.[1] || "";
-      const expression = match?.[2] || part;
-      const trailing = match?.[3] || "";
-      if (!shouldCoalesceConcatOperand(expression)) {
-        return part;
-      }
-      return `${leading}COALESCE(${expression}, '')${trailing}`;
-    }
-
-    function convertConcatChain(chain) {
-      const ranges = getSqlProtectedRanges(chain);
-      const parts = [];
-      const operators = [];
-      let start = 0;
-      let depth = 0;
-
-      for (let i = 0; i < chain.length; i += 1) {
-        const range = protectedRangeAt(ranges, i);
-        if (range) {
-          i = range.end - 1;
-          continue;
-        }
-
-        if (chain[i] === "(") {
-          depth += 1;
-          continue;
-        }
-        if (chain[i] === ")") {
-          depth = Math.max(0, depth - 1);
-          continue;
-        }
-        if (depth === 0 && chain.slice(i, i + 2) === "||") {
-          parts.push(chain.slice(start, i));
-          operators.push("||");
-          i += 1;
-          start = i + 1;
-        }
-      }
-
-      parts.push(chain.slice(start));
-      return parts
-        .map((part, index) => `${coalesceConcatOperand(part)}${operators[index] || ""}`)
-        .join("");
-    }
-
-    function convertStringConcatenation(sql) {
-      const ranges = getSqlProtectedRanges(sql);
-      let output = "";
-      let cursor = 0;
-      let index = 0;
-
-      while (index < sql.length) {
-        if (sql.slice(index, index + 2) !== "||" || isProtectedIndex(ranges, index)) {
-          index += 1;
-          continue;
-        }
-
-        const chainStart = readConcatOperandStart(sql, index, ranges);
-        if (chainStart < cursor) {
-          index += 2;
-          continue;
-        }
-
-        let operatorIndex = index;
-        let chainEnd = readConcatOperandEnd(sql, operatorIndex + 2, ranges);
-        while (true) {
-          const nextOperator = nextConcatOperator(sql, chainEnd, ranges);
-          if (nextOperator === -1) {
-            break;
-          }
-          operatorIndex = nextOperator;
-          chainEnd = readConcatOperandEnd(sql, operatorIndex + 2, ranges);
-        }
-
-        output += sql.slice(cursor, chainStart);
-        output += convertConcatChain(sql.slice(chainStart, chainEnd));
-        cursor = chainEnd;
-        index = chainEnd;
-      }
-
-      output += sql.slice(cursor);
-      return output;
-    }
-
     function convertNvl(args, argsText, context = {}) {
       if (args.length !== 2) {
         return formatCall("COALESCE", args.length ? args : [argsText], argsText, context);
@@ -2697,6 +2426,94 @@
       return replaceOutsideSqlLiterals(sql, /COMMENT\s+ON\s+COLUMN\s+([A-Za-z_][\w$#.]*)\s+IS\s+('(?:''|[^'])*')/gi, "COMMENT ON COLUMN $1 IS $2");
     }
 
+    function skipWhitespaceAndComments(sql, index) {
+      let cursor = index;
+      while (cursor < sql.length) {
+        if (/\s/.test(sql[cursor])) {
+          cursor += 1;
+          continue;
+        }
+
+        if (sql.startsWith("--", cursor)) {
+          const end = sql.indexOf("\n", cursor);
+          cursor = end === -1 ? sql.length : end + 1;
+          continue;
+        }
+
+        if (sql.startsWith("/*", cursor)) {
+          const end = sql.indexOf("*/", cursor + 2);
+          cursor = end === -1 ? sql.length : end + 2;
+          continue;
+        }
+
+        break;
+      }
+      return cursor;
+    }
+
+    function readAliasToken(sql, index) {
+      if (sql[index] === '"') {
+        const end = readQuoted(sql, index, '"');
+        return { value: sql.slice(index, end), end };
+      }
+
+      const match = sql.slice(index).match(/^[A-Za-z_][\w$#]*/);
+      return match
+        ? { value: match[0], end: index + match[0].length }
+        : null;
+    }
+
+    function isDerivedTableAliasStopWord(token) {
+      if (token.startsWith('"')) {
+        return false;
+      }
+
+      const normalized = token.replace(/^"|"$/g, "").toUpperCase();
+      return [
+        "WHERE", "JOIN", "INNER", "LEFT", "RIGHT", "FULL", "CROSS", "NATURAL",
+        "ON", "USING", "GROUP", "ORDER", "HAVING", "LIMIT", "OFFSET", "FETCH",
+        "UNION", "EXCEPT", "INTERSECT", "CONNECT", "START", "MODEL", "MATCH_RECOGNIZE"
+      ].includes(normalized);
+    }
+
+    function hasDerivedTableWithoutAlias(sql) {
+      const ranges = getSqlProtectedRanges(sql);
+      const pattern = /\b(?:FROM|JOIN)\s*\(/gi;
+      let match;
+
+      while ((match = pattern.exec(sql)) !== null) {
+        if (isProtectedIndex(ranges, match.index)) {
+          continue;
+        }
+
+        const openIndex = match.index + match[0].length - 1;
+        const innerStart = skipWhitespaceAndComments(sql, openIndex + 1);
+        if (!/^(?:SELECT|WITH)\b/i.test(sql.slice(innerStart))) {
+          continue;
+        }
+
+        const closeIndex = findClosingParen(sql, openIndex);
+        if (closeIndex === -1) {
+          continue;
+        }
+
+        let aliasIndex = skipWhitespaceAndComments(sql, closeIndex + 1);
+        let alias = readAliasToken(sql, aliasIndex);
+        if (alias && /^AS$/i.test(alias.value)) {
+          aliasIndex = skipWhitespaceAndComments(sql, alias.end);
+          alias = readAliasToken(sql, aliasIndex);
+        }
+
+        if (!alias || isDerivedTableAliasStopWord(alias.value)) {
+          return true;
+        }
+
+        pattern.lastIndex = closeIndex + 1;
+      }
+
+      return false;
+    }
+
     function collectWarnings(original, converted) {
       const warnings = [];
 
@@ -2717,7 +2534,8 @@
         [/\bREGEXP_SUBSTR\s*\(/i, "REGEXP_SUBSTR は検索開始位置とパターン互換性を個別確認してください。"],
         [/\bREGEXP_LIKE\s*\(/i, "REGEXP_LIKE はパターン互換性を個別確認してください。"],
         [/\bTO_MULTI_BYTE\s*\(/i, "TO_MULTI_BYTE はPostgreSQL側の関数定義を確認してください。"],
-        [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"]
+        [/\bPRAGMA\s+AUTONOMOUS_TRANSACTION\b/i, "自律型トランザクションはPostgreSQLに直接対応しないため、Java側を含めて仕様確認してください。"],
+        [/\|\|/, "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を手動確認してください。"]
       ];
 
       checks.forEach(([pattern, message]) => {
@@ -2730,8 +2548,16 @@
         warnings.push("MERGE USING (SELECT ...) が残っています。VALUES 句または実テーブル USING へ手動確認してください。");
       }
 
+      if (targetPostgresMajorVersion < 15 && matchesOutsideSqlLiterals(converted, /\bMERGE\s+INTO\b/i)) {
+        warnings.push("PostgreSQL 15未満ではMERGE文を利用できないため、INSERT ... ON CONFLICT等への手動変換が必要です。");
+      }
+
       if (matchesOutsideSqlLiterals(converted, /\bFROM\s+(?:SYS\.)?DUAL\b/i)) {
         warnings.push("FROM DUAL が残っています。該当箇所を確認してください。");
+      }
+
+      if (hasDerivedTableWithoutAlias(converted)) {
+        warnings.push(`${targetPostgresLabel}ではFROM/JOIN句のサブクエリに別名が必要です。例: FROM (...) AS alias`);
       }
 
       if (matchesOutsideSqlLiterals(converted, /TODO:/i) || /\/\*\s*TODO:/i.test(converted)) {
@@ -2774,7 +2600,6 @@
       sql = replaceFunctionCalls(sql, "LPAD", convertLpad, conversionWarnings);
       sql = replaceFunctionCalls(sql, "LAST_DAY", convertLastDay, conversionWarnings);
       sql = convertTrimNullPredicates(sql);
-      sql = convertStringConcatenation(sql);
       sql = convertMergeUsingDual(sql, conversionWarnings);
       sql = convertMergeUpdateWhereClauses(sql, conversionWarnings);
       sql = convertMergeTargetQualifiers(sql);
@@ -2788,7 +2613,8 @@
       const warnings = conversionWarnings.concat(collectWarnings(warningSource, sql), rownumWarnings);
       return {
         sql,
-        warnings: [...new Set(warnings)]
+        warnings: [...new Set(warnings)],
+        targetPostgresVersion
       };
     }
 
@@ -2877,7 +2703,8 @@
 
       return {
         sql,
-        warnings: [...new Set(embeddedWarnings.concat(result.warnings))]
+        warnings: [...new Set(embeddedWarnings.concat(result.warnings))],
+        targetPostgresVersion
       };
     }
 
