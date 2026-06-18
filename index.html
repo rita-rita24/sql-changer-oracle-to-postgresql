@@ -583,9 +583,17 @@
       "PRECISION", "RAW", "REAL", "TEXT", "TIMESTAMP", "VARCHAR", "VARCHAR2"
     ]);
 
-    function updateMeta() {
+    function updateMeta(options = {}) {
       inputStatus.textContent = oracleSql.value.trim() ? "入力あり" : "入力待ち";
-      outputStatus.textContent = postgresSql.value.trim() ? "変換済み" : "未変換";
+      if (options.hasError) {
+        outputStatus.textContent = "変換エラー";
+      } else if (!oracleSql.value.trim()) {
+        outputStatus.textContent = "未変換";
+      } else if (oracleSql.value === postgresSql.value) {
+        outputStatus.textContent = "変換済み（差分なし）";
+      } else {
+        outputStatus.textContent = "変換済み（差分あり）";
+      }
     }
 
     function escapeHtml(value) {
@@ -2908,7 +2916,7 @@
       } catch (error) {
         postgresSql.value = "";
         renderWarnings([`変換エラー: ${error.message}`], "エラー");
-        updateMeta();
+        updateMeta({ hasError: true });
       }
       renderSqlHighlights();
       syncOracleHighlightScroll();
