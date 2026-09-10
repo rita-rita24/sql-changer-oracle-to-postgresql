@@ -1,0 +1,608 @@
+
+> sql-changer-oracle-to-postgresql@0.2.1 test:unit
+> node --test tests/unit/*.test.mjs
+
+TAP version 13
+# Subtest: preserves established conversion policy 1: CREATE TABLE t (id NUMBER(12,0), v NUMBER(10,2), n NUMBER, name V
+ok 1 - preserves established conversion policy 1: CREATE TABLE t (id NUMBER(12,0), v NUMBER(10,2), n NUMBER, name V
+  ---
+  duration_ms: 12.046
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 2: SELECT SYSDATE, SYSTIMESTAMP, SYSDATE - 1 FROM DUAL;
+ok 2 - preserves established conversion policy 2: SELECT SYSDATE, SYSTIMESTAMP, SYSDATE - 1 FROM DUAL;
+  ---
+  duration_ms: 6.281208
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 3: SELECT NVL(col, 'x'), NVL(amount, 0), NVL2(flag, 'Y', 'N') FROM t
+ok 3 - preserves established conversion policy 3: SELECT NVL(col, 'x'), NVL(amount, 0), NVL2(flag, 'Y', 'N') FROM t
+  ---
+  duration_ms: 10.658084
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 4: SELECT DECODE(status, NULL, 'missing', 'A', 'active', 'other') FR
+ok 4 - preserves established conversion policy 4: SELECT DECODE(status, NULL, 'missing', 'A', 'active', 'other') FR
+  ---
+  duration_ms: 2.460833
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 5: SELECT TO_NUMBER(amount_txt), TO_NUMBER(TRIM(amount_txt)), TO_NUM
+ok 5 - preserves established conversion policy 5: SELECT TO_NUMBER(amount_txt), TO_NUMBER(TRIM(amount_txt)), TO_NUM
+  ---
+  duration_ms: 3.922417
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 6: SELECT TO_CHAR(created_at), TO_CHAR(amount), TO_CHAR(created_at,
+ok 6 - preserves established conversion policy 6: SELECT TO_CHAR(created_at), TO_CHAR(amount), TO_CHAR(created_at,
+  ---
+  duration_ms: 3.426334
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 7: SELECT TO_DATE(date_txt), TO_DATE('2024-06-15'), TO_DATE('50-01-0
+ok 7 - preserves established conversion policy 7: SELECT TO_DATE(date_txt), TO_DATE('2024-06-15'), TO_DATE('50-01-0
+  ---
+  duration_ms: 6.986542
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 8: SELECT TRUNC(amount), TRUNC(created_at, 'MM'), ADD_MONTHS(d, 1),
+ok 8 - preserves established conversion policy 8: SELECT TRUNC(amount), TRUNC(created_at, 'MM'), ADD_MONTHS(d, 1),
+  ---
+  duration_ms: 4.607209
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 9: SELECT SUBSTR(code, 0, 3), SUBSTR(code, -2), SUBSTR(code, -3, 2),
+ok 9 - preserves established conversion policy 9: SELECT SUBSTR(code, 0, 3), SUBSTR(code, -2), SUBSTR(code, -3, 2),
+  ---
+  duration_ms: 3.03725
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 10: SELECT first_name || ' ' || last_name FROM t;
+ok 10 - preserves established conversion policy 10: SELECT first_name || ' ' || last_name FROM t;
+  ---
+  duration_ms: 4.896792
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 11: SELECT * FROM t WHERE ROWNUM <= 10 ORDER BY id;
+ok 11 - preserves established conversion policy 11: SELECT * FROM t WHERE ROWNUM <= 10 ORDER BY id;
+  ---
+  duration_ms: 6.754541
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 12: SELECT * FROM t WHERE active = 1 AND ROWNUM <= 10 AND deleted = 0
+ok 12 - preserves established conversion policy 12: SELECT * FROM t WHERE active = 1 AND ROWNUM <= 10 AND deleted = 0
+  ---
+  duration_ms: 2.994542
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 13: SELECT MYSEQ.NEXTVAL, MYSEQ.CURRVAL FROM DUAL;
+ok 13 - preserves established conversion policy 13: SELECT MYSEQ.NEXTVAL, MYSEQ.CURRVAL FROM DUAL;
+  ---
+  duration_ms: 1.842584
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 14: UPDATE TEST A SET A.X = B, TEST.Y = 2 WHERE A.ID = B.ID;
+ok 14 - preserves established conversion policy 14: UPDATE TEST A SET A.X = B, TEST.Y = 2 WHERE A.ID = B.ID;
+  ---
+  duration_ms: 3.95975
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 15: MERGE INTO tgt t USING src s ON (t.id=s.id) WHEN MATCHED THEN UPD
+ok 15 - preserves established conversion policy 15: MERGE INTO tgt t USING src s ON (t.id=s.id) WHEN MATCHED THEN UPD
+  ---
+  duration_ms: 3.164
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 16: const sql = "SELECT SYSDATE, CAST(1 AS NUMBER) FROM DUAL;";
+ok 16 - preserves established conversion policy 16: const sql = "SELECT SYSDATE, CAST(1 AS NUMBER) FROM DUAL;";
+  ---
+  duration_ms: 3.0725
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 17: (" SYSDATE ")
+ok 17 - preserves established conversion policy 17: (" SYSDATE ")
+  ---
+  duration_ms: 4.593708
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 18: SELECT 'NVL NUMBER SYSDATE' AS note FROM DUAL;
+ok 18 - preserves established conversion policy 18: SELECT 'NVL NUMBER SYSDATE' AS note FROM DUAL;
+  ---
+  duration_ms: 6.300875
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 19: SELECT 1 FROM DUEL;
+ok 19 - preserves established conversion policy 19: SELECT 1 FROM DUEL;
+  ---
+  duration_ms: 2.426792
+  type: 'test'
+  ...
+# Subtest: preserves established conversion policy 20: SEALECT 1 FROM DUAL;
+ok 20 - preserves established conversion policy 20: SEALECT 1 FROM DUAL;
+  ---
+  duration_ms: 3.248917
+  type: 'test'
+  ...
+# Subtest: audit regression LIT-01: 文字列データの破壊
+ok 21 - audit regression LIT-01: 文字列データの破壊
+  ---
+  duration_ms: 2.020083
+  type: 'test'
+  ...
+# Subtest: audit regression LIT-02: 文字列データの破壊
+ok 22 - audit regression LIT-02: 文字列データの破壊
+  ---
+  duration_ms: 2.644292
+  type: 'test'
+  ...
+# Subtest: audit regression LIT-03: 文字列データの破壊
+ok 23 - audit regression LIT-03: 文字列データの破壊
+  ---
+  duration_ms: 1.196458
+  type: 'test'
+  ...
+# Subtest: audit regression ID-01: 引用識別子の破壊
+ok 24 - audit regression ID-01: 引用識別子の破壊
+  ---
+  duration_ms: 1.213666
+  type: 'test'
+  ...
+# Subtest: audit regression ROW-01: 集計前後の行数制限
+ok 25 - audit regression ROW-01: 集計前後の行数制限
+  ---
+  duration_ms: 1.408709
+  type: 'test'
+  ...
+# Subtest: audit regression ROW-02: 整列前後の行数制限
+ok 26 - audit regression ROW-02: 整列前後の行数制限
+  ---
+  duration_ms: 3.23425
+  type: 'test'
+  ...
+# Subtest: audit regression ROW-03: サブクエリの範囲
+ok 27 - audit regression ROW-03: サブクエリの範囲
+  ---
+  duration_ms: 7.209
+  type: 'test'
+  ...
+# Subtest: audit regression ROW-04: 複数の上限制約
+ok 28 - audit regression ROW-04: 複数の上限制約
+  ---
+  duration_ms: 1.958167
+  type: 'test'
+  ...
+# Subtest: audit regression ROW-05: 論理式の範囲
+ok 29 - audit regression ROW-05: 論理式の範囲
+  ---
+  duration_ms: 2.105834
+  type: 'test'
+  ...
+# Subtest: audit regression FUN-01: 同名関数の入れ子
+ok 30 - audit regression FUN-01: 同名関数の入れ子
+  ---
+  duration_ms: 2.290666
+  type: 'test'
+  ...
+# Subtest: audit regression FUN-02: 同名関数の入れ子
+ok 31 - audit regression FUN-02: 同名関数の入れ子
+  ---
+  duration_ms: 2.8395
+  type: 'test'
+  ...
+# Subtest: audit regression FUN-03: 関数と括弧の間のコメント
+ok 32 - audit regression FUN-03: 関数と括弧の間のコメント
+  ---
+  duration_ms: 2.5675
+  type: 'test'
+  ...
+# Subtest: audit regression NULL-01: 空文字のNULL扱い
+ok 33 - audit regression NULL-01: 空文字のNULL扱い
+  ---
+  duration_ms: 2.712917
+  type: 'test'
+  ...
+# Subtest: audit regression NULL-02: DECODEのNULL比較
+ok 34 - audit regression NULL-02: DECODEのNULL比較
+  ---
+  duration_ms: 2.209459
+  type: 'test'
+  ...
+# Subtest: audit regression TYPE-01: 数値への空文字比較
+ok 35 - audit regression TYPE-01: 数値への空文字比較
+  ---
+  duration_ms: 1.958666
+  type: 'test'
+  ...
+# Subtest: audit regression TYPE-02: 列名による型推測
+ok 36 - audit regression TYPE-02: 列名による型推測
+  ---
+  duration_ms: 1.492625
+  type: 'test'
+  ...
+# Subtest: audit regression TYPE-03: NVLの暗黙変換
+ok 37 - audit regression TYPE-03: NVLの暗黙変換
+  ---
+  duration_ms: 1.000625
+  type: 'test'
+  ...
+# Subtest: audit regression FMT-01: 数値の小数精度
+ok 38 - audit regression FMT-01: 数値の小数精度
+  ---
+  duration_ms: 2.506542
+  type: 'test'
+  ...
+# Subtest: audit regression FMT-02: 未知の数値書式
+ok 39 - audit regression FMT-02: 未知の数値書式
+  ---
+  duration_ms: 2.45975
+  type: 'test'
+  ...
+# Subtest: audit regression DATE-01: TO_DATEの時刻保持
+ok 40 - audit regression DATE-01: TO_DATEの時刻保持
+  ---
+  duration_ms: 2.111042
+  type: 'test'
+  ...
+# Subtest: audit regression DATE-02: 日付の加算
+ok 41 - audit regression DATE-02: 日付の加算
+  ---
+  duration_ms: 3.949042
+  type: 'test'
+  ...
+# Subtest: audit regression DATE-03: RRの世紀解釈
+ok 42 - audit regression DATE-03: RRの世紀解釈
+  ---
+  duration_ms: 1.633417
+  type: 'test'
+  ...
+# Subtest: audit regression DATE-04: NLS指定の欠落
+ok 43 - audit regression DATE-04: NLS指定の欠落
+  ---
+  duration_ms: 2.113708
+  type: 'test'
+  ...
+# Subtest: audit regression DDL-01: 文区切りの破壊
+ok 44 - audit regression DDL-01: 文区切りの破壊
+  ---
+  duration_ms: 6.417875
+  type: 'test'
+  ...
+# Subtest: audit regression DDL-02: FLOATの精度指定
+ok 45 - audit regression DDL-02: FLOATの精度指定
+  ---
+  duration_ms: 1.770458
+  type: 'test'
+  ...
+# Subtest: audit regression DDL-03: IDENTITYの型
+ok 46 - audit regression DDL-03: IDENTITYの型
+  ---
+  duration_ms: 2.852042
+  type: 'test'
+  ...
+# Subtest: audit regression DDL-04: NUMBERの精度省略
+ok 47 - audit regression DDL-04: NUMBERの精度省略
+  ---
+  duration_ms: 1.490708
+  type: 'test'
+  ...
+# Subtest: audit regression MERGE-01: INSERT側のWHERE
+ok 48 - audit regression MERGE-01: INSERT側のWHERE
+  ---
+  duration_ms: 2.529125
+  type: 'test'
+  ...
+# Subtest: audit regression MERGE-02: UPDATEとDELETEの組み合わせ
+ok 49 - audit regression MERGE-02: UPDATEとDELETEの組み合わせ
+  ---
+  duration_ms: 1.678542
+  type: 'test'
+  ...
+# Subtest: audit regression DUAL-01: DUALの列参照
+ok 50 - audit regression DUAL-01: DUALの列参照
+  ---
+  duration_ms: 1.290541
+  type: 'test'
+  ...
+# Subtest: audit regression DUAL-02: DUALとのJOIN
+ok 51 - audit regression DUAL-02: DUALとのJOIN
+  ---
+  duration_ms: 2.533042
+  type: 'test'
+  ...
+# Subtest: audit regression SUB-01: SUBSTRの長さゼロ
+ok 52 - audit regression SUB-01: SUBSTRの長さゼロ
+  ---
+  duration_ms: 1.320833
+  type: 'test'
+  ...
+# Subtest: audit regression SUB-02: SUBSTRの負の長さ
+ok 53 - audit regression SUB-02: SUBSTRの負の長さ
+  ---
+  duration_ms: 2.267125
+  type: 'test'
+  ...
+# Subtest: audit regression SEQ-01: 引用されたシーケンス
+ok 54 - audit regression SEQ-01: 引用されたシーケンス
+  ---
+  duration_ms: 1.591584
+  type: 'test'
+  ...
+# Subtest: audit regression WARN-01: 未対応集計の見落とし
+ok 55 - audit regression WARN-01: 未対応集計の見落とし
+  ---
+  duration_ms: 0.951917
+  type: 'test'
+  ...
+# Subtest: audit regression WARN-02: 拡張機能依存の見落とし
+ok 56 - audit regression WARN-02: 拡張機能依存の見落とし
+  ---
+  duration_ms: 0.98625
+  type: 'test'
+  ...
+# Subtest: audit regression WARN-03: コメントによる誤警告
+ok 57 - audit regression WARN-03: コメントによる誤警告
+  ---
+  duration_ms: 1.910709
+  type: 'test'
+  ...
+# Subtest: audit regression LEX-01: SQLとホスト言語の引用規則
+ok 58 - audit regression LEX-01: SQLとホスト言語の引用規則
+  ---
+  duration_ms: 1.200583
+  type: 'test'
+  ...
+# Subtest: preserves every literal and comment across DML transformations
+ok 59 - preserves every literal and comment across DML transformations
+  ---
+  duration_ms: 28.917375
+  type: 'test'
+  ...
+# Subtest: shared lexer respects commas, parentheses and semicolons in protected text
+ok 60 - shared lexer respects commas, parentheses and semicolons in protected text
+  ---
+  duration_ms: 2.213708
+  type: 'test'
+  ...
+# Subtest: detects unterminated delimiters even after a complete comment or doubled quote
+ok 61 - detects unterminated delimiters even after a complete comment or doubled quote
+  ---
+  duration_ms: 11.334708
+  type: 'test'
+  ...
+# Subtest: separates SQL quoted identifiers from embedded program strings
+ok 62 - separates SQL quoted identifiers from embedded program strings
+  ---
+  duration_ms: 8.113375
+  type: 'test'
+  ...
+# Subtest: supports quoted sequence names and protects sequence-like literal content
+ok 63 - supports quoted sequence names and protects sequence-like literal content
+  ---
+  duration_ms: 4.302375
+  type: 'test'
+  ...
+# Subtest: does not rewrite keyword substrings of Oracle identifiers
+ok 64 - does not rewrite keyword substrings of Oracle identifiers
+  ---
+  duration_ms: 1.840167
+  type: 'test'
+  ...
+# Subtest: only converts complete independent ROWNUM bounds
+ok 65 - only converts complete independent ROWNUM bounds
+  ---
+  duration_ms: 13.609792
+  type: 'test'
+  ...
+# Subtest: nested empty-string normalization applies to the full outer expression
+ok 66 - nested empty-string normalization applies to the full outer expression
+  ---
+  duration_ms: 9.87775
+  type: 'test'
+  ...
+# Subtest: warnings do not report unsupported functions mentioned only in literals
+ok 67 - warnings do not report unsupported functions mentioned only in literals
+  ---
+  duration_ms: 1.840167
+  type: 'test'
+  ...
+# Subtest: Oracle helper policy remains explicit for nested helper calls
+ok 68 - Oracle helper policy remains explicit for nested helper calls
+  ---
+  duration_ms: 2.285208
+  type: 'test'
+  ...
+# Subtest: escapes newly introduced newlines in embedded SQL without changing the program string
+ok 69 - escapes newly introduced newlines in embedded SQL without changing the program string
+  ---
+  duration_ms: 3.1305
+  type: 'test'
+  ...
+# Subtest: bounds nested DECODE expansion and flags evaluation-sensitive expressions
+ok 70 - bounds nested DECODE expansion and flags evaluation-sensitive expressions
+  ---
+  duration_ms: 25.032
+  type: 'test'
+  ...
+# Subtest: retains ROWNUM with statistical aggregates and projected row numbers
+ok 71 - retains ROWNUM with statistical aggregates and projected row numbers
+  ---
+  duration_ms: 5.368625
+  type: 'test'
+  ...
+# Subtest: preserves host variable names while converting their SQL string values
+ok 72 - preserves host variable names while converting their SQL string values
+  ---
+  duration_ms: 1.689042
+  type: 'test'
+  ...
+# Subtest: reports input errors and locates review items by SQL statement
+ok 73 - reports input errors and locates review items by SQL statement
+  ---
+  duration_ms: 25.606042
+  type: 'test'
+  ...
+# Subtest: copy fallback failure is reported without claiming success
+ok 74 - copy fallback failure is reported without claiming success
+  ---
+  duration_ms: 4.1555
+  type: 'test'
+  ...
+# Subtest: Oracle empty results remain NULL for literal function boundaries
+ok 75 - Oracle empty results remain NULL for literal function boundaries
+  ---
+  duration_ms: 40.360417
+  type: 'test'
+  ...
+# Subtest: targets PostgreSQL 15.17 for conversion decisions
+ok 76 - targets PostgreSQL 15.17 for conversion decisions
+  ---
+  duration_ms: 13.601208
+  type: 'test'
+  ...
+# Subtest: converts executable Oracle tokens without rewriting string literals, comments, or quoted identifiers
+ok 77 - converts executable Oracle tokens without rewriting string literals, comments, or quoted identifiers
+  ---
+  duration_ms: 11.431958
+  type: 'test'
+  ...
+# Subtest: converts SQL stored inside double-quoted strings while preserving quoted identifiers
+ok 78 - converts SQL stored inside double-quoted strings while preserving quoted identifiers
+  ---
+  duration_ms: 4.661834
+  type: 'test'
+  ...
+# Subtest: converts Oracle SQL fragments inside double-quoted data strings
+ok 79 - converts Oracle SQL fragments inside double-quoted data strings
+  ---
+  duration_ms: 6.876792
+  type: 'test'
+  ...
+# Subtest: preserves sequence-like text and storage-clause text inside literals while converting executable SQL
+ok 80 - preserves sequence-like text and storage-clause text inside literals while converting executable SQL
+  ---
+  duration_ms: 5.834917
+  type: 'test'
+  ...
+# Subtest: does not convert function-looking text inside literals or comments
+ok 81 - does not convert function-looking text inside literals or comments
+  ---
+  duration_ms: 3.311083
+  type: 'test'
+  ...
+# Subtest: converts DECODE NULL comparisons using IS NULL semantics
+ok 82 - converts DECODE NULL comparisons using IS NULL semantics
+  ---
+  duration_ms: 3.40525
+  type: 'test'
+  ...
+# Subtest: moves ROWNUM limits after ORDER BY for top-level SELECT statements
+ok 83 - moves ROWNUM limits after ORDER BY for top-level SELECT statements
+  ---
+  duration_ms: 28.868333
+  type: 'test'
+  ...
+# Subtest: removes middle ROWNUM predicates without dropping surrounding filters
+ok 84 - removes middle ROWNUM predicates without dropping surrounding filters
+  ---
+  duration_ms: 7.524708
+  type: 'test'
+  ...
+# Subtest: converts TRUNC with numeric and date overloads without producing invalid date_trunc for numeric values
+ok 85 - converts TRUNC with numeric and date overloads without producing invalid date_trunc for numeric values
+  ---
+  duration_ms: 8.476125
+  type: 'test'
+  ...
+# Subtest: does not silently approximate MONTHS_BETWEEN because Oracle fractional month semantics differ
+ok 86 - does not silently approximate MONTHS_BETWEEN because Oracle fractional month semantics differ
+  ---
+  duration_ms: 4.05625
+  type: 'test'
+  ...
+# Subtest: applies PostgreSQL-required function argument policy for common Oracle functions
+ok 87 - applies PostgreSQL-required function argument policy for common Oracle functions
+  ---
+  duration_ms: 8.001625
+  type: 'test'
+  ...
+# Subtest: normalizes empty strings to null for string-like conversion inputs
+ok 88 - normalizes empty strings to null for string-like conversion inputs
+  ---
+  duration_ms: 10.969083
+  type: 'test'
+  ...
+# Subtest: warns about string concatenation without rewriting operands
+ok 89 - warns about string concatenation without rewriting operands
+  ---
+  duration_ms: 2.602709
+  type: 'test'
+  ...
+# Subtest: warns when a derived table has no alias required by PostgreSQL
+ok 90 - warns when a derived table has no alias required by PostgreSQL
+  ---
+  duration_ms: 5.173875
+  type: 'test'
+  ...
+# Subtest: warns about Oracle-only syntax that PostgreSQL 15.17 cannot parse directly
+ok 91 - warns about Oracle-only syntax that PostgreSQL 15.17 cannot parse directly
+  ---
+  duration_ms: 7.377667
+  type: 'test'
+  ...
+# Subtest: warns about malformed SQL delimiters and parentheses
+ok 92 - warns about malformed SQL delimiters and parentheses
+  ---
+  duration_ms: 2.398959
+  type: 'test'
+  ...
+# Subtest: does not treat PostgreSQL casts or literal text as Oracle bind and substitution variables
+ok 93 - does not treat PostgreSQL casts or literal text as Oracle bind and substitution variables
+  ---
+  duration_ms: 1.322292
+  type: 'test'
+  ...
+# Subtest: keeps helper-function policies explicit when PostgreSQL has no direct equivalent
+ok 94 - keeps helper-function policies explicit when PostgreSQL has no direct equivalent
+  ---
+  duration_ms: 2.987375
+  type: 'test'
+  ...
+# Subtest: removes target qualifiers from ordinary UPDATE SET clauses only
+ok 95 - removes target qualifiers from ordinary UPDATE SET clauses only
+  ---
+  duration_ms: 3.028917
+  type: 'test'
+  ...
+# Subtest: moves Oracle MERGE UPDATE SET WHERE clauses to PostgreSQL WHEN MATCHED conditions
+ok 96 - moves Oracle MERGE UPDATE SET WHERE clauses to PostgreSQL WHEN MATCHED conditions
+  ---
+  duration_ms: 6.471917
+  type: 'test'
+  ...
+# Subtest: combines existing MERGE MATCHED conditions and ignores nested WHERE inside SET expressions
+ok 97 - combines existing MERGE MATCHED conditions and ignores nested WHERE inside SET expressions
+  ---
+  duration_ms: 3.278291
+  type: 'test'
+  ...
+# Subtest: escapes highlighted SQL so dangerous markup is displayed as text
+ok 98 - escapes highlighted SQL so dangerous markup is displayed as text
+  ---
+  duration_ms: 4.723084
+  type: 'test'
+  ...
+# Subtest: property: dangerous literal payloads survive conversion exactly as literal text
+ok 99 - property: dangerous literal payloads survive conversion exactly as literal text
+  ---
+  duration_ms: 16.379083
+  type: 'test'
+  ...
+1..99
+# tests 99
+# suites 0
+# pass 99
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 451.232375

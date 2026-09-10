@@ -1,0 +1,470 @@
+{
+  "auditDate": "2026-09-07",
+  "sourceSha256": "56cac1b27e8108036c2cec55e24d6776db6d6bb66e6eeb7c41acbc553ca4a648",
+  "targetPostgresVersion": "15.17",
+  "method": "Converter executed locally; SQL semantics assessed against official documentation. No Oracle/PostgreSQL server execution.",
+  "limitation": "Deliberately selected edge cases, not a representative sample. Counts are not accuracy or failure rates.",
+  "probeCount": 38,
+  "probesWithNoWarnings": 36,
+  "controls": [
+    {
+      "id": "CONTROL-01",
+      "category": "単純な型置換",
+      "input": "CREATE TABLE t (id NUMBER(10,0), name VARCHAR2(20));",
+      "expectation": "NUMERIC(10,0)とVARCHAR(20)への基本変換。",
+      "observed": {
+        "sql": "CREATE TABLE t (id NUMERIC(10,0), name VARCHAR(20));",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "CONTROL-02",
+      "category": "基本的なリテラル保護",
+      "input": "SELECT 'NVL SYSDATE NUMBER' AS note FROM DUAL;",
+      "expectation": "リテラル内容の維持とFROM DUALの除去。",
+      "observed": {
+        "sql": "SELECT 'NVL SYSDATE NUMBER' AS note;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "CONTROL-03",
+      "category": "未対応関数の警告",
+      "input": "SELECT MONTHS_BETWEEN(d1, d2) FROM t;",
+      "expectation": "関数を保持して意味差の確認を促す既存方針。",
+      "observed": {
+        "sql": "SELECT MONTHS_BETWEEN(d1, d2) FROM t;",
+        "warnings": [
+          "MONTHS_BETWEEN はOracleの月末/小数月セマンティクスと差が出やすいため、自動近似せず手動確認してください。"
+        ],
+        "targetPostgresVersion": "15.17"
+      }
+    }
+  ],
+  "observations": [
+    {
+      "id": "LIT-01",
+      "category": "文字列データの破壊",
+      "input": "UPDATE t a SET a.note = 'a.id=1';",
+      "expectation": "格納する文字列 a.id=1 をそのまま保持する必要がある。",
+      "observed": {
+        "sql": "UPDATE t a SET note = 'id =1';",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "LIT-02",
+      "category": "文字列データの破壊",
+      "input": "MERGE INTO t USING s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET t.note='INSERT (t.id)';",
+      "expectation": "文字列内の INSERT (t.id) を保持する必要がある。",
+      "observed": {
+        "sql": "MERGE INTO t USING s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET note='INSERT (id)';",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "LIT-03",
+      "category": "文字列データの破壊",
+      "input": "SELECT 'WHERE ORDER BY' AS note FROM t WHERE ROWNUM <= 2;",
+      "expectation": "文字列 WHERE ORDER BY を保持する必要がある。",
+      "observed": {
+        "sql": "SELECT 'ORDER BY' AS note FROM t\nLIMIT 2;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "ID-01",
+      "category": "引用識別子の破壊",
+      "input": "CREATE TABLE \"DATE\" (\"NUMBER\" NUMBER);",
+      "expectation": "テーブル名 \"DATE\" と列名 \"NUMBER\" を保持する必要がある。",
+      "observed": {
+        "sql": "CREATE TABLE \"TIMESTAMP\" (\"NUMERIC\" NUMERIC);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "ROW-01",
+      "category": "集計前後の行数制限",
+      "input": "SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;",
+      "expectation": "集計対象は最大2行。COUNTの結果行へのLIMITでは同じ意味にならない。",
+      "observed": {
+        "sql": "SELECT COUNT(*) FROM t\nLIMIT 2;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "ROW-02",
+      "category": "整列前後の行数制限",
+      "input": "SELECT * FROM t WHERE ROWNUM <= 2 ORDER BY id;",
+      "expectation": "同一問い合わせブロックのROWNUMはORDER BY前。単純なORDER BY後のLIMITは等価でない。",
+      "observed": {
+        "sql": "SELECT * FROM t ORDER BY id\nLIMIT 2;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "ROW-03",
+      "category": "サブクエリの範囲",
+      "input": "SELECT * FROM t WHERE EXISTS (SELECT 1 FROM u WHERE ROWNUM <= 2 AND u.id=t.id);",
+      "expectation": "内側のROWNUMを外側SELECTのLIMITへ移してはならない。",
+      "observed": {
+        "sql": "SELECT * FROM t WHERE EXISTS (SELECT 1 FROM u WHERE u.id=t.id)\nLIMIT 2;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "ROW-04",
+      "category": "複数の上限制約",
+      "input": "SELECT * FROM t WHERE ROWNUM <= 10 AND ROWNUM <= 2;",
+      "expectation": "両方の条件を満たす上限は2。",
+      "observed": {
+        "sql": "SELECT * FROM t\nLIMIT 10;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "ROW-05",
+      "category": "論理式の範囲",
+      "input": "SELECT * FROM t WHERE active=1 OR deleted=0 AND ROWNUM <= 2;",
+      "expectation": "ORの一方にだけ付くROWNUMをSELECT全体のLIMITへ移してはならない。",
+      "observed": {
+        "sql": "SELECT * FROM t WHERE active=1 OR deleted=0\nLIMIT 2;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "FUN-01",
+      "category": "同名関数の入れ子",
+      "input": "SELECT NVL(NVL(a, b), c) FROM t;",
+      "expectation": "内側のNVLも変換または未対応として警告する必要がある。",
+      "observed": {
+        "sql": "SELECT COALESCE(NULLIF(NVL(a, b), ''), c) FROM t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "FUN-02",
+      "category": "同名関数の入れ子",
+      "input": "SELECT DECODE(x, 1, DECODE(y, 2, 'yes', 'no'), 'other') FROM t;",
+      "expectation": "内側のOracle DECODEも変換または警告する必要がある。",
+      "observed": {
+        "sql": "SELECT (CASE WHEN x = 1 THEN DECODE(y, 2, 'yes', 'no') ELSE 'other' END) FROM t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "FUN-03",
+      "category": "関数と括弧の間のコメント",
+      "input": "SELECT NVL/* comment */(name, 'x') FROM t;",
+      "expectation": "コメントが挟まってもNVL関数として扱う必要がある。",
+      "observed": {
+        "sql": "SELECT NVL/* comment */(name, 'x') FROM t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "NULL-01",
+      "category": "空文字のNULL扱い",
+      "input": "SELECT NVL2('', 1, 0) FROM DUAL;",
+      "expectation": "Oracleでは空文字がNULLのため0。生成CASEでは空文字が非NULLになり1。",
+      "observed": {
+        "sql": "SELECT (CASE WHEN '' IS NOT NULL THEN 1 ELSE 0 END);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "NULL-02",
+      "category": "DECODEのNULL比較",
+      "input": "SELECT DECODE(CAST(NULL AS NUMBER), CAST(NULL AS NUMBER), 1, 0) FROM DUAL;",
+      "expectation": "OracleのDECODEはNULL同士も一致するため1。通常の等号では一致せず0。",
+      "observed": {
+        "sql": "SELECT (CASE WHEN CAST(NULL AS NUMERIC) = CAST(NULL AS NUMERIC) THEN 1 ELSE 0 END);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "TYPE-01",
+      "category": "数値への空文字比較",
+      "input": "SELECT TO_NUMBER(123) FROM DUAL;",
+      "expectation": "数値123をNULLIF(123, '')で処理するとPostgreSQLで型エラーになる。",
+      "observed": {
+        "sql": "SELECT TO_NUMBER(NULLIF(123, ''), '999');",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "TYPE-02",
+      "category": "列名による型推測",
+      "input": "SELECT NVL(flag, '0') FROM (SELECT CAST(1 AS NUMBER) flag FROM DUAL) t;",
+      "expectation": "flagは数値。NULLIF(flag, '')を挿入してはならない。",
+      "observed": {
+        "sql": "SELECT COALESCE(NULLIF(flag, ''), '0') FROM (SELECT CAST(1 AS NUMERIC) flag) t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "TYPE-03",
+      "category": "NVLの暗黙変換",
+      "input": "SELECT NVL(CAST(NULL AS VARCHAR2(10)), 0) FROM DUAL;",
+      "expectation": "Oracleは第2引数を文字列へ変換する。PostgreSQL COALESCEのvarcharとintegerは共通型に解決できない。",
+      "observed": {
+        "sql": "SELECT COALESCE(CAST(NULL AS VARCHAR(10)), 0);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "FMT-01",
+      "category": "数値の小数精度",
+      "input": "SELECT TO_CHAR(12.34) FROM DUAL;",
+      "expectation": "小数のないFM999999999という書式を補完すると12.34の小数部を保持できない。",
+      "observed": {
+        "sql": "SELECT TO_CHAR(12.34, 'FM999999999');",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "FMT-02",
+      "category": "未知の数値書式",
+      "input": "SELECT TO_NUMBER(amount_txt) FROM t;",
+      "expectation": "列の実データやNLSを調べず9桁整数書式を補完しており、小数・桁数の意味を保証できない。",
+      "observed": {
+        "sql": "SELECT TO_NUMBER(NULLIF(amount_txt, ''), '999999999') FROM t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DATE-01",
+      "category": "TO_DATEの時刻保持",
+      "input": "SELECT TO_DATE('2024-06-15 12:34:56', 'YYYY-MM-DD HH24:MI:SS') FROM DUAL;",
+      "expectation": "Oracle DATEは時刻を持つ。PostgreSQL to_dateの戻り値は日付のみ。",
+      "observed": {
+        "sql": "SELECT TO_DATE('2024-06-15 12:34:56', 'YYYY-MM-DD HH24:MI:SS');",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DATE-02",
+      "category": "日付の加算",
+      "input": "SELECT DATE '2024-06-15' + 1 FROM DUAL;",
+      "expectation": "Oracleの日数加算がTIMESTAMP + integerになり、PostgreSQL標準の演算子がない。",
+      "observed": {
+        "sql": "SELECT TIMESTAMP '2024-06-15' + 1;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DATE-03",
+      "category": "RRの世紀解釈",
+      "input": "SELECT TO_DATE('50-01-01', 'RR-MM-DD') FROM DUAL;",
+      "expectation": "Oracleの現在年が2026ならRRの50は1950。PostgreSQL YYの50は2020に近い2050。",
+      "observed": {
+        "sql": "SELECT TO_DATE('50-01-01', 'YY-MM-DD');",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DATE-04",
+      "category": "NLS指定の欠落",
+      "input": "SELECT TO_DATE('15-JUIN-2024', 'DD-MON-YYYY', 'NLS_DATE_LANGUAGE=FRENCH') FROM DUAL;",
+      "expectation": "第3引数の言語指定を黙って落としており、フランス語の月名を保証できない。",
+      "observed": {
+        "sql": "SELECT TO_DATE('15-JUIN-2024', 'DD-MON-YYYY');",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DDL-01",
+      "category": "文区切りの破壊",
+      "input": "CREATE TABLE t (id NUMBER) TABLESPACE users;\nCREATE TABLE u (id NUMBER);",
+      "expectation": "TABLESPACE削除時に最初のセミコロンを消してはならない。",
+      "observed": {
+        "sql": "CREATE TABLE t (id NUMERIC) \nCREATE TABLE u (id NUMERIC);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DDL-02",
+      "category": "FLOATの精度指定",
+      "input": "CREATE TABLE t (val FLOAT(126));",
+      "expectation": "DOUBLE PRECISION(126)はPostgreSQLの有効な型指定ではない。",
+      "observed": {
+        "sql": "CREATE TABLE t (val DOUBLE PRECISION(126));",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DDL-03",
+      "category": "IDENTITYの型",
+      "input": "CREATE TABLE t (id NUMBER GENERATED ALWAYS AS IDENTITY);",
+      "expectation": "PostgreSQLのIDENTITYには整数型が必要。NUMERICへの一律変換では不足。",
+      "observed": {
+        "sql": "CREATE TABLE t (id NUMERIC GENERATED ALWAYS AS IDENTITY);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DDL-04",
+      "category": "NUMBERの精度省略",
+      "input": "CREATE TABLE t (val NUMBER(*,2));",
+      "expectation": "NUMERIC(*,2)はPostgreSQLの有効な型指定ではない。",
+      "observed": {
+        "sql": "CREATE TABLE t (val NUMERIC(*,2));",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "MERGE-01",
+      "category": "INSERT側のWHERE",
+      "input": "MERGE INTO t USING s ON (t.id=s.id) WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id) WHERE s.active=1;",
+      "expectation": "INSERT後のWHEREはPostgreSQL 15のMERGE構文へ変換または警告が必要。",
+      "observed": {
+        "sql": "MERGE INTO t USING s ON (t.id=s.id) WHEN NOT MATCHED THEN INSERT (id) VALUES (s.id) WHERE s.active=1;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "MERGE-02",
+      "category": "UPDATEとDELETEの組み合わせ",
+      "input": "MERGE INTO t USING s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET t.n=s.n DELETE WHERE t.n=0;",
+      "expectation": "OracleのUPDATE後DELETE WHEREはPostgreSQL 15でそのまま実行できない。",
+      "observed": {
+        "sql": "MERGE INTO t USING s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET n=s.n DELETE WHERE t.n=0;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DUAL-01",
+      "category": "DUALの列参照",
+      "input": "SELECT dummy FROM DUAL;",
+      "expectation": "DUALを消すだけではdummy列の参照先がなくなる。",
+      "observed": {
+        "sql": "SELECT dummy;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "DUAL-02",
+      "category": "DUALとのJOIN",
+      "input": "SELECT t.id FROM DUAL d CROSS JOIN t;",
+      "expectation": "FROMを消すとSELECT t.id CROSS JOIN tという不正な構文になる。",
+      "observed": {
+        "sql": "SELECT t.id CROSS JOIN t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "SUB-01",
+      "category": "SUBSTRの長さゼロ",
+      "input": "SELECT SUBSTR('abc', 1, 0) FROM DUAL;",
+      "expectation": "OracleのNULLとPostgreSQLの空文字の差を扱う必要がある。",
+      "observed": {
+        "sql": "SELECT SUBSTR('abc', 1, 0);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "SUB-02",
+      "category": "SUBSTRの負の長さ",
+      "input": "SELECT SUBSTR('abc', 1, -1) FROM DUAL;",
+      "expectation": "OracleではNULL。PostgreSQLでは負のsubstring長のエラーになる。",
+      "observed": {
+        "sql": "SELECT SUBSTR('abc', 1, -1);",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "SEQ-01",
+      "category": "引用されたシーケンス",
+      "input": "SELECT \"MYSEQ\".NEXTVAL FROM DUAL;",
+      "expectation": "引用されたシーケンスのNEXTVALが未変換のまま残る。",
+      "observed": {
+        "sql": "SELECT \"MYSEQ\".NEXTVAL;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "WARN-01",
+      "category": "未対応集計の見落とし",
+      "input": "SELECT LISTAGG(name, ',') WITHIN GROUP (ORDER BY name) FROM t;",
+      "expectation": "標準PostgreSQL 15にはこのOracle LISTAGGがない。変換または警告が必要。",
+      "observed": {
+        "sql": "SELECT LISTAGG(name, ',') WITHIN GROUP (ORDER BY name) FROM t;",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "WARN-02",
+      "category": "拡張機能依存の見落とし",
+      "input": "SELECT SOUNDEX('hello') FROM DUAL;",
+      "expectation": "PostgreSQLではfuzzystrmatchなどの拡張が必要だが、依存関係が通知されない。",
+      "observed": {
+        "sql": "SELECT SOUNDEX('hello');",
+        "warnings": [],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "WARN-03",
+      "category": "コメントによる誤警告",
+      "input": "-- fetch two rows\nSELECT * FROM t WHERE ROWNUM <= 2;",
+      "expectation": "SELECTであるのにSELECT以外のROWNUMという警告になる。",
+      "observed": {
+        "sql": "-- fetch two rows\nSELECT * FROM t WHERE ROWNUM <= 2;",
+        "warnings": [
+          "SELECT 以外の ROWNUM 条件は LIMIT へ自動変換せず、手動確認してください。"
+        ],
+        "targetPostgresVersion": "15.17"
+      }
+    },
+    {
+      "id": "LEX-01",
+      "category": "SQLとホスト言語の引用規則",
+      "input": "SELECT '\\' AS slash, NVL(name, 'x') FROM t;",
+      "expectation": "Oracleの通常リテラルではバックスラッシュは終端引用符をエスケープしない。現在は未閉じ引用符と誤判定する。",
+      "observed": {
+        "sql": "SELECT '\\' AS slash, NVL(name, 'x') FROM t;",
+        "warnings": [
+          "SQLの引用符、ドルクォート、またはブロックコメントが閉じていない可能性があります。"
+        ],
+        "targetPostgresVersion": "15.17"
+      }
+    }
+  ]
+}

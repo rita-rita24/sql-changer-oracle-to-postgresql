@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-09-10T19:46:59.831Z",
+  "sourceSha256": "980177f9f9bdabfa7ec84c9ad1c7a10df03c5cad6fc8e6f9ac676feb17163c9f",
+  "beforeSourceSha256": "f5bb49bad51d14a3885bc338e3ee3541be8444de06e79ba8537363a9fc3e1e2e",
+  "databaseEnginesExecuted": false,
+  "comparison": "変換SQL・警告・診断情報・ステータスのJSON全体を変更前と照合",
+  "corpusCases": 179,
+  "comparedInputs": 191,
+  "allOutputsIdentical": true,
+  "benchmark": {
+    "statements": 6500,
+    "characters": 394279,
+    "unit": "ms",
+    "before": 2906,
+    "after": 753
+  }
+}

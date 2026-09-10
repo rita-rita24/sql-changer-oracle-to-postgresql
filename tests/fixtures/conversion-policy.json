@@ -1,0 +1,82 @@
+[
+  {
+    "input": "CREATE TABLE t (id NUMBER(12,0), v NUMBER(10,2), n NUMBER, name VARCHAR2(20), d DATE, c CLOB, b BLOB);",
+    "sql": "CREATE TABLE t (id NUMERIC(12,0), v NUMERIC(10,2), n NUMERIC, name VARCHAR(20), d TIMESTAMP, c TEXT, b BYTEA);"
+  },
+  {
+    "input": "SELECT SYSDATE, SYSTIMESTAMP, SYSDATE - 1 FROM DUAL;",
+    "sql": "SELECT CLOCK_TIMESTAMP(), CLOCK_TIMESTAMP(), CLOCK_TIMESTAMP() - INTERVAL '1 day';"
+  },
+  {
+    "input": "SELECT NVL(col, 'x'), NVL(amount, 0), NVL2(flag, 'Y', 'N') FROM t;",
+    "sql": "SELECT COALESCE(NULLIF(col, ''), 'x'), COALESCE(amount, 0), (CASE WHEN NULLIF(flag, '') IS NOT NULL THEN 'Y' ELSE 'N' END) FROM t;"
+  },
+  {
+    "input": "SELECT DECODE(status, NULL, 'missing', 'A', 'active', 'other') FROM t;",
+    "sql": "SELECT (CASE WHEN status IS NULL THEN 'missing' WHEN status = 'A' THEN 'active' ELSE 'other' END) FROM t;"
+  },
+  {
+    "input": "SELECT TO_NUMBER(amount_txt), TO_NUMBER(TRIM(amount_txt)), TO_NUMBER('12.34') FROM t;",
+    "sql": "SELECT TO_NUMBER(NULLIF(amount_txt, ''), '999999999'), TO_NUMBER(NULLIF(TRIM(amount_txt), ''), '999999999'), TO_NUMBER('12.34', '99.99') FROM t;"
+  },
+  {
+    "input": "SELECT TO_CHAR(created_at), TO_CHAR(amount), TO_CHAR(created_at, 'RR-MM-DD') FROM t;",
+    "sql": "SELECT TO_CHAR(created_at, 'YYYY-MM-DD HH24:MI:SS'), TO_CHAR(amount, 'FM999999999'), TO_CHAR(created_at, 'YY-MM-DD') FROM t;"
+  },
+  {
+    "input": "SELECT TO_DATE(date_txt), TO_DATE('2024-06-15'), TO_DATE('50-01-01', 'RR-MM-DD') FROM t;",
+    "sql": "SELECT TO_DATE(NULLIF(date_txt, ''), 'YYYYMMDD'), TO_DATE('2024-06-15', 'YYYY-MM-DD'), TO_DATE('50-01-01', 'YY-MM-DD') FROM t;"
+  },
+  {
+    "input": "SELECT TRUNC(amount), TRUNC(created_at, 'MM'), ADD_MONTHS(d, 1), MONTHS_BETWEEN(d1,d2), LAST_DAY(d), INSTR(code,'-') FROM t;",
+    "sql": "SELECT TRUNC(amount), TRUNC(created_at, 'MM'), ADD_MONTHS(d, 1), MONTHS_BETWEEN(d1,d2), LAST_DAY(d), INSTR(code, '-') FROM t;"
+  },
+  {
+    "input": "SELECT SUBSTR(code, 0, 3), SUBSTR(code, -2), SUBSTR(code, -3, 2), LPAD(12, 4, 0) FROM t;",
+    "sql": "SELECT SUBSTR(code, 1, 3), RIGHT(code, 2), SUBSTR(RIGHT(code, 3), 1, 2), LPAD(CAST(12 AS TEXT), 4, '0') FROM t;"
+  },
+  {
+    "input": "SELECT first_name || ' ' || last_name FROM t;",
+    "sql": "SELECT first_name || ' ' || last_name FROM t;"
+  },
+  {
+    "input": "SELECT * FROM t WHERE ROWNUM <= 10 ORDER BY id;",
+    "sql": "SELECT * FROM t ORDER BY id\nLIMIT 10;"
+  },
+  {
+    "input": "SELECT * FROM t WHERE active = 1 AND ROWNUM <= 10 AND deleted = 0;",
+    "sql": "SELECT * FROM t WHERE active = 1 AND deleted = 0\nLIMIT 10;"
+  },
+  {
+    "input": "SELECT MYSEQ.NEXTVAL, MYSEQ.CURRVAL FROM DUAL;",
+    "sql": "SELECT nextval('myseq'), currval('myseq');"
+  },
+  {
+    "input": "UPDATE TEST A SET A.X = B, TEST.Y = 2 WHERE A.ID = B.ID;",
+    "sql": "UPDATE TEST A SET X = B, Y = 2 WHERE A.ID = B.ID;"
+  },
+  {
+    "input": "MERGE INTO tgt t USING src s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET t.name=s.name WHERE s.active=1;",
+    "sql": "MERGE INTO tgt t USING src s ON (t.id=s.id) WHEN MATCHED AND (s.active=1) THEN UPDATE SET name=s.name;"
+  },
+  {
+    "input": "const sql = \"SELECT SYSDATE, CAST(1 AS NUMBER) FROM DUAL;\";",
+    "sql": "const sql = \"SELECT CLOCK_TIMESTAMP(), CAST(1 AS NUMERIC);\";"
+  },
+  {
+    "input": "(\" SYSDATE \")",
+    "sql": "(\" CLOCK_TIMESTAMP() \")"
+  },
+  {
+    "input": "SELECT 'NVL NUMBER SYSDATE' AS note FROM DUAL;",
+    "sql": "SELECT 'NVL NUMBER SYSDATE' AS note;"
+  },
+  {
+    "input": "SELECT 1 FROM DUEL;",
+    "sql": "SELECT 1;"
+  },
+  {
+    "input": "SEALECT 1 FROM DUAL;",
+    "sql": "SELECT 1;"
+  }
+]

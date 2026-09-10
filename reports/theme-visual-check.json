@@ -1,0 +1,49 @@
+{
+  "issues": [],
+  "palettes": [
+    {
+      "theme": "dark",
+      "background": "rgb(28, 35, 44)",
+      "tokens": {
+        ".tok-keyword": "rgb(140, 204, 245)",
+        ".tok-function": "rgb(196, 167, 245)",
+        ".tok-type": "rgb(239, 193, 132)",
+        ".tok-string": "rgb(134, 213, 175)",
+        ".tok-number": "rgb(243, 160, 166)",
+        ".tok-operator": "rgb(183, 197, 213)"
+      },
+      "text": "rgb(224, 231, 239)",
+      "muted": "rgb(161, 174, 189)",
+      "contrast": {
+        ".tok-keyword": 9.1,
+        ".tok-function": 7.69,
+        ".tok-type": 9.52,
+        ".tok-string": 9.16,
+        ".tok-number": 7.83,
+        ".tok-operator": 9.02
+      }
+    },
+    {
+      "theme": "light",
+      "background": "rgb(255, 255, 255)",
+      "tokens": {
+        ".tok-keyword": "rgb(7, 89, 133)",
+        ".tok-function": "rgb(117, 64, 200)",
+        ".tok-type": "rgb(153, 81, 11)",
+        ".tok-string": "rgb(4, 120, 87)",
+        ".tok-number": "rgb(185, 28, 28)",
+        ".tok-operator": "rgb(71, 85, 105)"
+      },
+      "text": "rgb(32, 44, 57)",
+      "muted": "rgb(98, 113, 128)",
+      "contrast": {
+        ".tok-keyword": 7.56,
+        ".tok-function": 6.32,
+        ".tok-type": 5.94,
+        ".tok-string": 5.48,
+        ".tok-number": 6.47,
+        ".tok-operator": 7.58
+      }
+    }
+  ]
+}
