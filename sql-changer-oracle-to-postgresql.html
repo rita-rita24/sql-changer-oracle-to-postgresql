@@ -17,7 +17,7 @@
       try {
         const saved = window.localStorage.getItem(key);
         if (validTheme(saved)) preference = saved;
-      } catch (_) { /* Theme switching also works when storage is unavailable. */ }
+      } catch (_) {}
 
       function applyTheme() {
         const theme = preference || (system.matches ? "dark" : "light");
@@ -31,7 +31,6 @@
         }
       }
 
-      // Apply before CSS and the first paint to avoid a flash of the wrong theme.
       applyTheme();
       system.addEventListener("change", () => { if (!preference) applyTheme(); });
       window.addEventListener("storage", (event) => {
@@ -46,7 +45,7 @@
         button.addEventListener("click", () => {
           preference = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
           applyTheme();
-          try { window.localStorage.setItem(key, preference); } catch (_) { /* Keep the choice for this tab. */ }
+          try { window.localStorage.setItem(key, preference); } catch (_) {}
         });
       }, { once: true });
     })();
@@ -54,16 +53,7 @@
   <link rel="icon" type="image/svg+xml" sizes="any" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCA2NCA2NCI+PHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTQiIGZpbGw9IiMwZjc2NmUiLz48cGF0aCBmaWxsPSIjZGZmN2YyIiBkPSJNMTIgMTNoNDBhNCA0IDAgMCAxIDQgNHYzMGE0IDQgMCAwIDEtNCA0SDEyYTQgNCAwIDAgMS00LTRWMTdhNCA0IDAgMCAxIDQtNFoiLz48cGF0aCBmaWxsPSIjZjk3MzE2IiBkPSJNMTMgMjRjMC00IDUtNyAxMS03czExIDMgMTEgN3YxMmMwIDQtNSA3LTExIDdzLTExLTMtMTEtN1YyNFoiLz48ZWxsaXBzZSBjeD0iMjQiIGN5PSIyNCIgcng9IjExIiByeT0iNyIgZmlsbD0iI2ZkYmE3NCIvPjxwYXRoIHN0cm9rZT0iI2ZmZjdlZCIgc3Ryb2tlLXdpZHRoPSIzIiBzdHJva2UtbGluZWNhcD0icm91bmQiIGQ9Ik0xNSAzMGMyIDMgMTUgMyAxOCAwTTE1IDM2YzIgMyAxNSAzIDE4IDAiLz48cGF0aCBmaWxsPSIjMGY3NjZlIiBkPSJNMjkgMzFoMTF2LTVsMTEgOC0xMSA4di01SDI5eiIvPjxwYXRoIGZpbGw9IiMwODkxYjIiIGQ9Ik0zMSAzOWMwLTQgNS03IDExLTdzMTEgMyAxMSA3djhjMCA0LTUgNy0xMSA3cy0xMS0zLTExLTd2LThaIi8+PGVsbGlwc2UgY3g9IjQyIiBjeT0iMzkiIHJ4PSIxMSIgcnk9IjciIGZpbGw9IiM2N2U4ZjkiLz48cGF0aCBzdHJva2U9IiNlY2ZlZmYiIHN0cm9rZS13aWR0aD0iMyIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBkPSJNMzMgNDVjMiAzIDE1IDMgMTggMCIvPjwvc3ZnPg==">
 
   <style id="app-styles">
-/*!
-業務UI / GYOMU-UI 0.6.1 — このHTMLに内包したスタイル。
-このHTMLだけで動作します。外部CSS・JavaScript・アイコンファイルは不要です。
-組み込み時の変更: 導入ガイドと未使用のHTML例を除去し、画面固有CSSを統合。
-共通スタイルの宣言と第三者アイコンのライセンスは保持しています。
-*/
 
-/* tokens.css */
-/* Project-owned tokens. Unmarked nested .gm scopes inherit the surrounding colors. */
-/* BEGIN GENERATED COLORS — scripts/build-tokens.cjs */
 .gm:where(:not(.gm .gm)), .gm[data-mode="light"] {
   color-scheme: light;
   --gm-on-brand: #ffffff;
@@ -132,7 +122,7 @@
   --gm-focus: var(--gm-light-focus, #174da7) !important;
 }
 }
-/* END GENERATED COLORS */
+
 .gm {
   --gm-font: "Noto Sans JP", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
   --gm-text-size: .875rem;
@@ -170,12 +160,10 @@
 @media (pointer: coarse) {.gm[data-density="compact"] {--gm-control-height:2.75rem;--gm-cell-block:.75rem;}}
 @media (any-pointer: coarse) {.gm {--gm-control-xs-height:2.75rem;--gm-control-xs-text-size:1rem;--gm-control-xs-line-height:1.5rem;--gm-control-xs-icon-size:1.25rem;--gm-control-xs-arrow-size:1.25rem;}}
 
-/* components.css */
-/* All icons are official inline SVG elements supplied by the HTML or icon renderer. */
 .gm {font-family:var(--gm-font);font-size:var(--gm-text-size);line-height:1.65;color:var(--gm-text);background:var(--gm-surface);}
 .gm *, .gm *::before, .gm *::after {box-sizing:border-box;}
 .gm [hidden] {display:none!important;}
-/* Touch the edge by default; existing frames and filled controls are handled by the shared preset. */
+
 .gm :focus-visible {outline-width:2px;outline-style:solid;outline-color:var(--gm-focus);outline-offset:0;}
 .gm a {color:var(--gm-brand);text-underline-offset:.2em;}
 .gm button,.gm input,.gm select,.gm textarea {font:inherit;color:inherit;}
@@ -303,10 +291,10 @@
 .gm .gm-table th button .gm-icon {margin-inline-start:.25rem;}
 .gm .gm-table .gm-link {padding-block:0;min-height:var(--gm-choice-target);}
 .gm .gm-mode-toggle {position:relative;display:inline-flex;vertical-align:middle;}
-/* Keep the SVG out of inline text layout: its baseline otherwise shifts it inside this fixed slot. */
+
 .gm .gm-mode-icon {display:flex;align-items:center;justify-content:center;width:1.25rem;height:1.25rem;line-height:0;flex:none;}
 .gm .gm-mode-icon > .gm-icon {display:block;width:100%;height:100%;}
-/* Auxiliary controls use a separate size from business form density. */
+
 .gm .gm-btn[data-size="xs"],.gm .gm-input[data-size="xs"],.gm .gm-select-wrap[data-size="xs"] > .gm-select {min-height:var(--gm-control-xs-height);padding:var(--gm-control-xs-padding-block) var(--gm-control-xs-padding-inline);font-size:var(--gm-control-xs-text-size);line-height:var(--gm-control-xs-line-height);}
 .gm .gm-select-wrap[data-size="xs"] {--gm-select-arrow-size:var(--gm-control-xs-arrow-size);--gm-select-arrow-inset:.5rem;--gm-select-text-inset:calc(var(--gm-select-arrow-size) + var(--gm-select-arrow-inset) + var(--gm-select-text-gap));}
 .gm .gm-select-wrap[data-size="xs"] > .gm-select {padding-inline-end:var(--gm-select-text-inset);}
@@ -322,7 +310,7 @@
 @media(prefers-reduced-motion:reduce) {.gm * {scroll-behavior:auto!important;}}
 @media print {.gm .gm-btn,.gm .gm-search-panel,.gm .gm-pagination,.gm .gm-bulk,.gm .gm-skip{display:none!important;}.gm .gm-table-scroll{overflow:visible;}.gm .gm-table{min-width:0;}.gm .gm-panel{border:0;padding:0;}.gm .gm-detail dt{print-color-adjust:exact;}}
 .gm .gm-btn > .gm-icon {width:1rem;height:1rem;}
-/* Lists share a compact toolbar, bounded viewport and persistent pager. */
+
 .gm .gm-data-grid {min-width:0;border:1px solid var(--gm-border);border-radius:var(--gm-radius);background:var(--gm-surface);}
 .gm .gm-data-grid .gm-table-toolbar {position:relative;margin:0;padding:8px;}
 .gm .gm-grid-tools,.gm .gm-page-size,.gm .gm-page-navigation,.gm .gm-page-numbers {display:flex;align-items:center;gap:4px;flex-wrap:wrap;min-width:0;}
@@ -374,8 +362,6 @@
 @media(pointer:coarse) {.gm .gm-column-resize{width:44px;min-height:44px;}.gm .gm-column-settings > summary{min-width:44px;min-height:44px;}}
 @media print {.gm .gm-grid-tools,.gm .gm-column-resize{display:none!important;}.gm .gm-data-grid .gm-table-scroll{max-height:none!important;overflow:visible;}.gm .gm-data-grid .gm-table{min-width:0!important;}.gm .gm-data-grid .gm-table th{position:static!important;}}
 
-/* BEGIN GENERATED BUSINESS PRESET */
-/* 業務UIの標準プリセット。remはルート16pxの場合の値。ページ全体のルート文字サイズは変更しない。 */
 .gm {
   --gm-text-size: .875rem;
   --gm-label-size: .8125rem;
@@ -411,7 +397,6 @@
 .gm .gm-option {min-height:var(--gm-control-height);padding:var(--gm-control-padding-block) var(--gm-control-padding-inline);}
 .gm .gm-file-input::file-selector-button {min-height:var(--gm-control-height);padding-block:var(--gm-control-padding-block);}
 
-/* Text may grow and wrap; minimum target size does not require oversized visual icons. */
 .gm {overflow-wrap:anywhere;}
 .gm :where(.gm-btn,.gm-link,.gm-tab,.gm-tabs button,.gm-table th button,.gm-popover>summary) {min-width:24px;min-height:24px;}
 .gm .gm-btn,.gm .gm-tab {min-height:var(--gm-control-height);}
@@ -432,15 +417,14 @@
 .gm .gm-mode-tooltip,.gm .gm-tooltip-content {white-space:normal;overflow-wrap:anywhere;}
 .gm .gm-input-line>.gm-input {flex-basis:12rem;}
 .gm :focus-visible,.gm [id] {scroll-margin-block:var(--gm-scroll-offset);}
-/* A single 2px stroke replaces an existing frame without changing border width or layout. */
+
 .gm :is(.gm-input,.gm-select,.gm-textarea,.gm-btn,.gm-table-scroll,.gm-tab-panel):focus-visible,
 .gm .gm-switch input:focus-visible {outline-offset:-2px;}
-/* Filled surfaces need an internal contrasting stroke, not the brand color on itself.
-   The 1px outer rim is the unchanged fill, not an extra outline. */
+
 .gm .gm-btn.gm-btn-primary:focus-visible {outline-color:var(--gm-on-brand);outline-offset:-3px;}
 .gm .gm-btn.gm-btn-danger:focus-visible {outline-color:var(--gm-on-error);outline-offset:-3px;}
 .gm .gm-switch input:checked:focus-visible {outline-color:var(--gm-on-brand);outline-offset:-3px;}
-/* The quiet variant has a transparent surface even when a semantic button class is present. */
+
 .gm .gm-btn[data-variant="quiet"]:focus-visible {outline-color:var(--gm-focus);outline-offset:-2px;}
 .gm .gm-table-scroll,.gm .gm-popup,.gm .gm-multi-list,.gm .gm-dialog {scroll-padding:1rem;}
 .gm .gm-option[data-active="true"] {outline:2px solid var(--gm-focus);outline-offset:-2px;}
@@ -472,9 +456,7 @@
 @media (prefers-reduced-motion:reduce) {
   .gm,.gm *,.gm *::before,.gm *::after {scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;transition-delay:0s!important;}
 }
-/* END GENERATED BUSINESS PRESET */
 
-/* extended.css */
 .gm .gm-btn[data-size="sm"] {min-height:1.75rem;padding:.125rem .5rem;}
 .gm .gm-copy-control {display:inline-block;max-width:100%;vertical-align:middle;}
 .gm .gm-copy-button {max-width:100%;}
@@ -549,8 +531,6 @@
 
 @media(any-pointer:coarse) {.gm .gm-tab,.gm .gm-switch,.gm .gm-segments label,.gm .gm-option,.gm .gm-menu button,.gm .gm-shell-nav a,.gm .gm-tree summary,.gm .gm-tree a {min-height:44px;min-width:44px;}.gm .gm-file-input::file-selector-button {min-height:44px;}}
 
-/* utilities.css */
-/* Optional, scoped utility classes. Include after component styles. */
 .gm .gm-p-1 { padding:var(--gm-space-1); }
 .gm .gm-px-1 { padding-inline:var(--gm-space-1); }
 .gm .gm-py-1 { padding-block:var(--gm-space-1); }
@@ -633,11 +613,8 @@
   .gm .lg\:gm-grid-cols-4 {grid-template-columns:repeat(4,minmax(0,1fr));}
 }
 
-/* Fixed column utilities collapse at narrow widths; responsive variants remain explicit. */
 @media(max-width:560px) {.gm .gm-grid-cols-2,.gm .gm-grid-cols-3{grid-template-columns:minmax(0,1fr);}.gm .gm-col-span-2{grid-column:auto;}}
 
-/* SQL converter layout. Keep the document root at the user's font size so
-   the supplied rem-based business UI tokens retain their intended dimensions. */
 :root.gm {
   font-size: 100%;
   --gm-code-font: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -972,14 +949,14 @@
   .gm .input-shell .sql-highlight { visibility: hidden; }
 }
 
-/*!
+  </style>
+<!--
 Third-party icon attribution
 Material Symbols Outlined / Google
 Source: https://github.com/google/material-design-icons
 Commit: 40a7a292a79d9394157e1ea24f83d52d5e17c556
 Modified: CSS examples add class, sizing, currentColor and accessibility attributes to inline SVG; original path coordinates and viewBox preserved.
-No NOTICE file at the pinned repository root.
-The following license applies to the third-party icon data only; it does not relicense the UI stylesheet.
+License for the third-party icon data:
 
 
                                  Apache License
@@ -1183,8 +1160,7 @@ The following license applies to the third-party icon data only; it does not rel
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-*/
-  </style>
+-->
 </head>
 <body>
   <div class="app">
@@ -4147,7 +4123,7 @@ The following license applies to the third-party icon data only; it does not rel
 
     function convert() {
       const source = oracleSql.value;
-      // Some browser input paths emit several events for the same value.
+
       if (source === lastConvertedSource) return;
       lastConvertedSource = source;
       cancelConversionWorker();
@@ -4269,7 +4245,7 @@ The following license applies to the third-party icon data only; it does not rel
                 } else previousRanges.forEach((previous) => selection.addRange(previous));
               }
             }
-          } catch (_) { /* Keep the output selected for manual copying when possible. */ }
+          } catch (_) {}
         }
         if (actionVersion === copyActionVersion && value === postgresSql.value) {
           showCopyFeedback(copied);
@@ -4366,7 +4342,7 @@ The following license applies to the third-party icon data only; it does not rel
         // Native insertion retains the browser's undo history. Fall back when
         // unavailable (including synthetic keyboard events on an unfocused field).
         if (document.activeElement === oracleSql) {
-          try { document.execCommand("insertText", false, "  "); } catch (_) { /* Use setRangeText below. */ }
+          try { document.execCommand("insertText", false, "  "); } catch (_) {}
         }
         if (oracleSql.value === previous) oracleSql.setRangeText("  ", start, end, "end");
         convert();
