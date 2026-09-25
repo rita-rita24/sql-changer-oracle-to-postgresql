@@ -4,7 +4,7 @@ import { loadApp } from "../helpers/load-app.mjs";
 
 test("reports input errors and locates review items by SQL statement", () => {
   const { convertOracleToPostgres: convert } = loadApp();
-  const result = convert("SELECT 1 FROM DUAL;\n\nSELECT COUNT(*) FROM t WHERE ROWNUM<=2;");
+  const result = convert("SELECT 1 FROM DUAL;\n\nSELECT COUNT(*) FROM t WHERE ROWNUM<=2 OR id=1;");
   assert.equal(result.status, "review-required");
   assert.equal(result.diagnostics[0].statement, 2);
   assert.equal(result.diagnostics[0].line, 3);
@@ -19,10 +19,13 @@ test("copy fallback failure is reported without claiming success", async () => {
   context.navigator.clipboard.writeText = async () => { throw new Error("denied"); };
   context.document.execCommand = () => false;
   await context.copyPostgres();
-  assert.match(elements.get("toast").textContent, /コピーできません/);
+  const feedback = () => context.showCopyFeedback
+    ? elements.get("copyPostgresButton").getAttribute("aria-label")
+    : elements.get("toast").textContent;
+  assert.match(feedback(), /コピーできません/);
   context.document.execCommand = () => { throw new Error("blocked"); };
   await context.copyPostgres();
-  assert.match(elements.get("toast").textContent, /コピーできません/);
+  assert.match(feedback(), /コピーできません/);
 });
 
 test("Oracle empty results remain NULL for literal function boundaries", () => {

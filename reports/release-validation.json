@@ -1,0 +1,47 @@
+{
+  "version": "0.2.1",
+  "sourceSha256": "f6cc6a051c86288c528417957382a146d9131472e169ac5e5a5ca88c2cda550c",
+  "checks": [
+    {
+      "name": "lint",
+      "passed": true
+    },
+    {
+      "name": "check:syntax",
+      "passed": true
+    },
+    {
+      "name": "test:unit",
+      "passed": true
+    },
+    {
+      "name": "test:e2e",
+      "passed": true
+    },
+    {
+      "name": "test:mutation",
+      "passed": true
+    },
+    {
+      "name": "test:databases",
+      "passed": true,
+      "startedAt": "2026-09-23T01:12:43.314Z",
+      "finishedAt": "2026-09-23T01:12:59.384Z"
+    }
+  ],
+  "verificationNote": "The first five checks passed in the release run. The application source stayed unchanged. After isolating the new database fixtures and verifying DDL through the resulting table schema, the complete database corpus was rerun successfully.",
+  "databaseComparison": {
+    "total": 3140,
+    "equivalent": 3125,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 0,
+    "silentMismatches": 0,
+    "silentExecutionErrors": 0,
+    "sourceErrors": 0
+  },
+  "oracleVersion": "Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free\nVersion 23.26.3.0.0",
+  "postgresVersion": "15.17 (Debian 15.17-1.pgdg13+1)",
+  "builtAt": "2026-09-23T04:16:52.096Z",
+  "sourceFile": "../sql-changer-oracle-to-postgresql.html"
+}

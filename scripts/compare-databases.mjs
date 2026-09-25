@@ -1,3 +1,4 @@
+import { appFile, databaseCasesFile } from "./app-config.mjs";
 // Real, disposable database comparison. Missing Docker/images/DB startup is a
 // failure, never a skipped or successful comparison. No existing DB is touched.
 import assert from "node:assert/strict";
@@ -5,11 +6,18 @@ import { execFile } from "node:child_process";
 import { promisify, isDeepStrictEqual } from "node:util";
 import { createHash, randomBytes } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
+import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import oracledb from "oracledb";
 import pg from "pg";
 import { loadApp } from "../tests/helpers/load-app.mjs";
-import { databaseCases } from "../tests/fixtures/database-cases.mjs";
+import { decimal } from "../tests/helpers/decimal-value.mjs";
+import { compareResults, oracleTypeFamily, postgresTypeFamily } from "../tests/helpers/compare-results.mjs";
+
+const corpusFile = databaseCasesFile;
+const { databaseCases, generation, holdoutGeneration } = await import(pathToFileURL(resolve(corpusFile)).href);
+assert.equal(new Set(databaseCases.map((fixture) => fixture.id)).size, databaseCases.length, "Duplicate database case IDs");
 
 process.env.TZ = "UTC";
 oracledb.fetchAsString = [oracledb.NUMBER];
@@ -23,7 +31,8 @@ const images = { oracle: "gvenzl/oracle-free:23.26.3-slim@sha256:6d61d267a3b978c
 const reportPath = process.env.SQL_CHANGER_COMPARISON_REPORT || "reports/database-comparison-latest.json";
 const convert = loadApp().convertOracleToPostgres;
 const created = [];
-const report = { schemaVersion: 1, startedAt: new Date().toISOString(), sourceSha256: createHash("sha256").update(await readFile("index.html")).digest("hex"), corpusSha256: createHash("sha256").update(await readFile("tests/fixtures/database-cases.mjs")).digest("hex"), oracleExecuted: false, postgresExecuted: false, images: {}, cases: [], cleanupComplete: false, passed: false };
+const sourceFile = appFile;
+const report = { schemaVersion: 2, startedAt: new Date().toISOString(), sourceFile, sourceSha256: createHash("sha256").update(await readFile(sourceFile)).digest("hex"), corpusFile, corpusSha256: createHash("sha256").update(JSON.stringify(databaseCases)).digest("hex"), generation, holdoutGeneration, oracleExecuted: false, postgresExecuted: false, images: {}, cases: [], cleanupComplete: false, passed: false };
 let oracle, postgres;
 
 async function start(engine, port, envNames) {
@@ -46,11 +55,6 @@ async function ready(connect, name) {
   }
   throw new Error(`${name} did not start: ${last?.code || last?.message}`);
 }
-function decimal(value) {
-  const text = String(value);
-  if (!/^[+-]?\d+(\.\d+)?$/.test(text)) return text;
-  return text.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "").replace(/^\+/, "");
-}
 function normalize(value, numeric) {
   if (value === null || value === undefined) return null;
   if (numeric || typeof value === "number") return { type: "number", value: decimal(value) };
@@ -62,10 +66,10 @@ async function query(engine, sql) {
   try {
     if (engine === "oracle") {
       const result = await oracle.execute(sql.replace(/;\s*$/, ""), [], { autoCommit: true });
-      return { rows: result.rows?.map((row) => row.map((v, i) => normalize(v, result.metaData[i].dbType === oracledb.DB_TYPE_NUMBER))), affected: result.rowsAffected };
+      return { rows: result.rows?.map((row) => row.map((v, i) => normalize(v, result.metaData[i].dbType === oracledb.DB_TYPE_NUMBER))), columnTypes: result.metaData?.map((field) => oracleTypeFamily(field.dbTypeName)), affected: result.rowsAffected };
     }
     const result = await postgres.query({ text: sql, rowMode: "array" });
-    return { rows: result.command === "SELECT" ? result.rows.map((row) => row.map((v, i) => normalize(v, [20,21,23,700,701,1700].includes(result.fields[i].dataTypeID)))) : undefined, affected: result.command === "SELECT" ? undefined : result.rowCount ?? undefined };
+    return { rows: result.command === "SELECT" ? result.rows.map((row) => row.map((v, i) => normalize(v, [20,21,23,700,701,1700].includes(result.fields[i].dataTypeID)))) : undefined, columnTypes: result.command === "SELECT" ? result.fields.map((field) => postgresTypeFamily(field.dataTypeID)) : undefined, affected: result.command === "SELECT" ? undefined : result.rowCount ?? undefined };
   } catch (error) { return { error: engine === "oracle" ? `ORA-${String(error.errorNum).padStart(5, "0")}` : error.code, message: error.message.split("\n")[0] }; }
 }
 async function required(engine, sql) {
@@ -92,10 +96,17 @@ try {
   await required("oracle", "ALTER SESSION SET NLS_NUMERIC_CHARACTERS = '.,'");
   await required("postgres", "SET TIME ZONE 'UTC'");
   await required("postgres", "SET statement_timeout = '10s'");
+  report.oracleSession = (await oracle.execute("SELECT parameter,value FROM nls_session_parameters ORDER BY parameter")).rows;
+  report.oracleCharacterSets = (await oracle.execute("SELECT parameter,value FROM nls_database_parameters WHERE parameter IN ('NLS_CHARACTERSET','NLS_NCHAR_CHARACTERSET') ORDER BY parameter")).rows;
   for (const sql of ["CREATE TABLE data_rows (id NUMBER, note VARCHAR2(80), n NUMBER)", "CREATE TABLE source_rows (id NUMBER, note VARCHAR2(80), n NUMBER)", "INSERT INTO data_rows VALUES (1,'one',0)", "INSERT INTO data_rows VALUES (2,'two',0)", "INSERT INTO data_rows VALUES (3,'three',0)", "INSERT INTO source_rows VALUES (1,'source',2)"]) {
     await required("oracle", sql); await required("postgres", convert(sql).sql);
   }
   for (const fixture of databaseCases) {
+    if (fixture.timezone) {
+      assert.match(fixture.timezone, /^[A-Za-z_]+\/[A-Za-z_]+$/);
+      await required("oracle", `ALTER SESSION SET TIME_ZONE = '${fixture.timezone}'`);
+      await postgres.query("SELECT set_config('TimeZone', $1, false)", [fixture.timezone]);
+    }
     const conversion = convert(fixture.source);
     const originalResult = await query("oracle", fixture.source);
     const convertedResult = await query("postgres", conversion.sql);
@@ -105,19 +116,30 @@ try {
       if (fixture.verify) { oracleResult = await query("oracle", fixture.verify); postgresResult = await query("postgres", convert(fixture.verify).sql); }
     }
     const issues = [];
-    if (oracleResult.error) issues.push(`Oracle source failed: ${oracleResult.error}`);
-    const actualEqual = !oracleResult.error && !postgresResult.error && isDeepStrictEqual(oracleResult.rows, postgresResult.rows) && (!fixture.verify ? oracleResult.affected === postgresResult.affected : true);
-    if (fixture.exception) {
+    if (oracleResult.error && !fixture.expectedErrors) issues.push(`Oracle source failed: ${oracleResult.error}`);
+    const comparison = compareResults(oracleResult, postgresResult, { affected: !fixture.verify, warnings: conversion.warnings });
+    const actualEqual = comparison.equivalent;
+    if (fixture.expectedErrors) {
+      if (oracleResult.error !== fixture.expectedErrors.oracle || postgresResult.error !== fixture.expectedErrors.postgres) issues.push("Invalid input was not rejected with the expected database errors");
+    } else if (fixture.exception) {
       const ex = fixture.exception;
       if (!conversion.warnings.length) issues.push("Policy exception has no user-visible warning");
       if (ex.oracle && !isDeepStrictEqual(ex.oracle, oracleResult.rows)) issues.push("Oracle differs from the explicit exception expectation");
       if (ex.postgresError ? postgresResult.error !== ex.postgresError : postgresResult.error || !isDeepStrictEqual(ex.postgres, postgresResult.rows)) issues.push("PostgreSQL differs from the explicit exception expectation");
     } else if (!actualEqual) issues.push("Unexpected value/type/row-count difference");
-    const record = { id: fixture.id, source: fixture.source, converted: conversion.sql, warnings: conversion.warnings, oracle: oracleResult, postgres: postgresResult, equivalent: actualEqual, disposition: fixture.exception ? "policy-exception" : "equivalent", exception: fixture.exception, passed: !issues.length, issues };
+    const record = { id: fixture.id, category: fixture.category, source: fixture.source, converted: conversion.sql, warnings: conversion.warnings, oracle: oracleResult, postgres: postgresResult, ...comparison, compareColumnTypes: true, disposition: fixture.expectedErrors ? "rejected-input" : fixture.exception ? "policy-exception" : "equivalent", exception: fixture.exception, expectedErrors: fixture.expectedErrors, timezone: fixture.timezone, passed: !issues.length, issues };
     report.cases.push(record);
     if (issues.length) console.log(`FAIL ${fixture.id}: ${issues.join("; ")}`);
+    if (report.cases.length % 250 === 0) console.log(`Compared ${report.cases.length}/${databaseCases.length} cases`);
+    if (fixture.timezone) {
+      await required("oracle", "ALTER SESSION SET TIME_ZONE = '+00:00'");
+      await required("postgres", "SET TIME ZONE 'UTC'");
+    }
   }
-  report.summary = { total: report.cases.length, equivalent: report.cases.filter((r) => r.passed && r.disposition === "equivalent").length, policyExceptions: report.cases.filter((r) => r.passed && r.disposition === "policy-exception").length, failed: report.cases.filter((r) => !r.passed).length };
+  report.summary = { total: report.cases.length, equivalent: report.cases.filter((r) => r.passed && r.disposition === "equivalent").length, policyExceptions: report.cases.filter((r) => r.passed && r.disposition === "policy-exception").length, rejectedInputs: report.cases.filter((r) => r.passed && r.disposition === "rejected-input").length, failed: report.cases.filter((r) => !r.passed).length };
+  report.summary.silentMismatches = report.cases.filter((r) => r.classification === "silent-mismatch").length;
+  report.summary.silentExecutionErrors = report.cases.filter((r) => r.classification === "silent-execution-error" && !r.expectedErrors).length;
+  report.summary.sourceErrors = report.cases.filter((r) => r.classification === "source-error" && !r.expectedErrors).length;
   report.passed = report.summary.failed === 0;
 } catch (error) { report.fatalError = error.message; process.exitCode = 1; }
 finally {

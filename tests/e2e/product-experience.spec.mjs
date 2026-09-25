@@ -5,19 +5,18 @@ async function openApp(page) {
   await expect(page.locator("#oracleSql")).toBeVisible();
 }
 
-test("empty editors disable unavailable actions and a sample produces usable output", async ({ page }) => {
+test("empty editors disable unavailable actions and entered SQL produces usable output", async ({ page }) => {
   await openApp(page);
 
   await expect(page.locator("#clearOracleButton")).toBeDisabled();
   await expect(page.locator("#copyPostgresButton")).toBeDisabled();
   await expect(page.locator("#undoClearButton")).toBeHidden();
-  await page.locator("#sampleSqlButton").click();
+  await page.locator("#oracleSql").fill("SELECT 1 FROM DUAL;");
 
   await expect(page.locator("#oracleSql")).not.toHaveValue("");
-  await expect(page.locator("#postgresHighlight")).not.toHaveText("");
+  await expect(page.locator("#postgresHighlight")).toHaveText("SELECT 1;");
   await expect(page.locator("#clearOracleButton")).toBeEnabled();
   await expect(page.locator("#copyPostgresButton")).toBeEnabled();
-  await expect(page.locator("#sampleSqlButton")).toBeHidden();
   await expect(page.locator("#oracleSql")).toBeFocused();
 });
 
@@ -98,7 +97,7 @@ test("converted SQL is reachable and scrollable with the keyboard", async ({ pag
 
 test("review count matches the items shown for repeated warnings in separate statements", async ({ page }) => {
   await openApp(page);
-  await page.locator("#oracleSql").fill("SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;\nSELECT COUNT(*) FROM t WHERE ROWNUM <= 2;");
+  await page.locator("#oracleSql").fill("SELECT COUNT(*) FROM t WHERE ROWNUM <= 2 OR id=1;\nSELECT COUNT(*) FROM t WHERE ROWNUM <= 2 OR id=1;");
   const items = page.locator("#warningsList li");
   await expect(items).toContainText([/文1・1行目/, /文1・1行目/, /文2・2行目/, /文2・2行目/]);
   await expect(page.locator("#outputStatus")).toHaveText(`要確認（${await items.count()}件）`);

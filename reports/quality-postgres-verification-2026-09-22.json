@@ -1,0 +1,255 @@
+{
+  "sourceSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+  "postgresVersion": "15.17",
+  "oracleExecuted": false,
+  "disposableCluster": true,
+  "passed": 27,
+  "fixes": 26,
+  "policyLimitations": 1,
+  "checks": [
+    {
+      "id": "update-literal",
+      "category": "fixed",
+      "input": "UPDATE t a SET a.note = 'a.id=1' WHERE a.id=1;",
+      "sql": "UPDATE t a SET note = 'a.id=1' WHERE a.id=1;",
+      "actual": [
+        {
+          "note": "a.id=1"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "id": "merge-literal",
+      "category": "fixed",
+      "input": "MERGE INTO t USING s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET t.note='INSERT (t.id)';",
+      "sql": "MERGE INTO t USING s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET note='INSERT (t.id)';",
+      "actual": [
+        {
+          "note": "INSERT (t.id)"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "id": "nested-nvl",
+      "category": "fixed",
+      "input": "SELECT NVL(NVL(CAST(NULL AS VARCHAR2(10)), ''), 'fallback') FROM DUAL;",
+      "sql": "SELECT COALESCE(NULLIF(COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), NULL), ''), 'fallback');",
+      "actual": "fallback",
+      "warnings": []
+    },
+    {
+      "id": "nested-decode",
+      "category": "fixed",
+      "input": "SELECT DECODE(1, 1, DECODE(2, 2, 'yes', 'no'), 'other') FROM DUAL;",
+      "sql": "SELECT (CASE WHEN 1 = 1 THEN (CASE WHEN 2 = 2 THEN 'yes' ELSE 'no' END) ELSE 'other' END);",
+      "actual": "yes",
+      "warnings": [
+        "DECODE の引数 (CASE WHEN 2 = 2 THEN 'yes' ELSE 'no' END) の型はスキーマ未検証です。従来の空文字・型推定を適用しているため、数値/日付列と文字列列の違いを確認してください。"
+      ]
+    },
+    {
+      "id": "comment-function",
+      "category": "fixed",
+      "input": "SELECT NVL/* , ) ; */(CAST(NULL AS VARCHAR2(10)), 'fallback') FROM DUAL;",
+      "sql": "SELECT /* , ) ; */COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), 'fallback');",
+      "actual": "fallback",
+      "warnings": []
+    },
+    {
+      "id": "null-nvl2",
+      "category": "fixed",
+      "input": "SELECT NVL2('', 1, 0) FROM DUAL;",
+      "sql": "SELECT (CASE WHEN NULLIF('', '') IS NOT NULL THEN 1 ELSE 0 END);",
+      "actual": 0,
+      "warnings": []
+    },
+    {
+      "id": "null-decode",
+      "category": "fixed",
+      "input": "SELECT DECODE(CAST(NULL AS NUMBER), CAST(NULL AS NUMBER), 1, 0) FROM DUAL;",
+      "sql": "SELECT (CASE WHEN CAST(NULL AS NUMERIC) IS NOT DISTINCT FROM CAST(NULL AS NUMERIC) THEN 1 ELSE 0 END);",
+      "actual": 1,
+      "warnings": []
+    },
+    {
+      "id": "numeric-input",
+      "category": "fixed",
+      "input": "SELECT TO_NUMBER(123) FROM DUAL;",
+      "sql": "SELECT CAST(123 AS NUMERIC);",
+      "actual": "123",
+      "warnings": []
+    },
+    {
+      "id": "decimal-input",
+      "category": "fixed",
+      "input": "SELECT TO_NUMBER('12.34') FROM DUAL;",
+      "sql": "SELECT CAST(NULLIF(CAST('12.34' AS TEXT), '') AS NUMERIC);",
+      "actual": "12.34",
+      "warnings": []
+    },
+    {
+      "id": "nvl-common-type",
+      "category": "fixed",
+      "input": "SELECT NVL(CAST(NULL AS VARCHAR2(10)), 0) FROM DUAL;",
+      "sql": "SELECT COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), CAST(0 AS TEXT));",
+      "actual": "0",
+      "warnings": []
+    },
+    {
+      "id": "substring-zero",
+      "category": "fixed",
+      "input": "SELECT SUBSTR('abc', 1, 0) FROM DUAL;",
+      "sql": "SELECT NULL;",
+      "actual": null,
+      "warnings": []
+    },
+    {
+      "id": "substring-negative",
+      "category": "fixed",
+      "input": "SELECT SUBSTR('abc', 1, -1) FROM DUAL;",
+      "sql": "SELECT NULL;",
+      "actual": null,
+      "warnings": []
+    },
+    {
+      "id": "substring-out-of-range",
+      "category": "fixed",
+      "input": "SELECT SUBSTR('abc', -9) FROM DUAL;",
+      "sql": "SELECT NULL;",
+      "actual": null,
+      "warnings": []
+    },
+    {
+      "id": "backslash",
+      "category": "fixed",
+      "input": "SELECT '\\' FROM DUAL;",
+      "sql": "SELECT '\\';",
+      "actual": "\\",
+      "warnings": []
+    },
+    {
+      "id": "protected-rownum-literal",
+      "category": "fixed",
+      "input": "SELECT 'WHERE ORDER BY' FROM t WHERE ROWNUM <= 2;",
+      "sql": "SELECT 'WHERE ORDER BY' FROM t\nLIMIT 2;",
+      "actual": "WHERE ORDER BY",
+      "warnings": []
+    },
+    {
+      "id": "multiple-rownum-bounds",
+      "category": "fixed",
+      "sql": "SELECT * FROM t\nLIMIT 2;",
+      "rowCount": 2
+    },
+    {
+      "id": "ddl-separator",
+      "category": "fixed",
+      "input": "CREATE TABLE storage_a (id NUMBER) TABLESPACE users;\nCREATE TABLE storage_b (id NUMBER);",
+      "sql": "CREATE TABLE storage_a (id NUMERIC) ;\nCREATE TABLE storage_b (id NUMERIC);",
+      "actual": [
+        {
+          "n": 2
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "id": "quoted-ddl",
+      "category": "fixed",
+      "input": "CREATE TABLE \"DATE\" (\"NUMBER\" NUMBER);",
+      "sql": "CREATE TABLE \"DATE\" (\"NUMBER\" NUMERIC);",
+      "actual": [
+        {
+          "column_name": "NUMBER"
+        }
+      ],
+      "warnings": []
+    },
+    {
+      "id": "float-precision",
+      "category": "fixed",
+      "input": "CREATE TABLE float_probe (v FLOAT(126));",
+      "sql": "CREATE TABLE float_probe (v DOUBLE PRECISION);",
+      "actual": [
+        {
+          "data_type": "double precision"
+        }
+      ],
+      "warnings": [
+        "FLOATの精度指定はDOUBLE PRECISIONへの変換に伴い除去します。精度・範囲を確認してください。"
+      ]
+    },
+    {
+      "id": "quoted-sequence",
+      "category": "fixed",
+      "input": "SELECT \"MYSEQ\".NEXTVAL FROM DUAL;",
+      "sql": "SELECT nextval('\"MYSEQ\"');",
+      "actual": "1",
+      "warnings": []
+    },
+    {
+      "id": "numeric-format",
+      "category": "fixed",
+      "input": "SELECT TO_CHAR(12.34) FROM DUAL;",
+      "sql": "SELECT REGEXP_REPLACE(CAST(TRIM_SCALE(CAST(12.34 AS NUMERIC)) AS TEXT), '^(-?)0[.]', '\\1.');",
+      "actual": "12.34",
+      "warnings": []
+    },
+    {
+      "id": "arithmetic-format",
+      "category": "fixed",
+      "input": "SELECT TO_CHAR(1/2) FROM DUAL;",
+      "sql": "SELECT REGEXP_REPLACE(CAST(TRIM_SCALE(CAST(1/CAST(2 AS NUMERIC) AS NUMERIC)) AS TEXT), '^(-?)0[.]', '\\1.');",
+      "actual": ".5",
+      "warnings": []
+    },
+    {
+      "id": "date-time",
+      "category": "fixed",
+      "sql": "SELECT MAKE_TIMESTAMP(2024, 6, 15, 12, 34, 56);",
+      "actual": {
+        "type": "timestamp without time zone",
+        "time": "12:34:56"
+      },
+      "warnings": []
+    },
+    {
+      "id": "date-arithmetic",
+      "category": "fixed",
+      "input": "SELECT TO_CHAR(DATE '2024-06-15' + 1, 'YYYY-MM-DD') FROM DUAL;",
+      "sql": "SELECT TO_CHAR((TIMESTAMP '2024-06-15' + (1) * INTERVAL '1 day'), 'YYYY-MM-DD');",
+      "actual": "2024-06-16",
+      "warnings": [
+        "DATE/TIMESTAMPの日数加減算・日付差は型置換だけでは互換になりません。intervalと戻り値の型を手動確認してください。"
+      ]
+    },
+    {
+      "id": "policy-identity-type",
+      "category": "policy-limitation",
+      "input": "CREATE TABLE identity_probe (id NUMBER GENERATED ALWAYS AS IDENTITY);",
+      "sql": "CREATE TABLE identity_probe (id NUMERIC GENERATED ALWAYS AS IDENTITY);",
+      "expectedErrorCode": "22023",
+      "warnings": [
+        "IDENTITY はPostgreSQLで整数型が必要です。従来のNUMBER→NUMERIC変換、ON NULL、および除去される採番オプションを確認してください。"
+      ]
+    },
+    {
+      "id": "derived-column-type",
+      "category": "fixed",
+      "input": "SELECT NVL(flag, '0') FROM (SELECT CAST(1 AS NUMBER) flag FROM DUAL) t;",
+      "sql": "SELECT COALESCE(flag, CAST(NULLIF('0', '') AS NUMERIC)) FROM (SELECT CAST(1 AS NUMERIC) flag) t;",
+      "actual": "1",
+      "warnings": []
+    },
+    {
+      "id": "aggregate-rownum",
+      "category": "fixed",
+      "input": "SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;",
+      "sql": "SELECT COUNT(*) FROM (SELECT * FROM t LIMIT 2) AS t;",
+      "actual": "2",
+      "warnings": []
+    }
+  ]
+}

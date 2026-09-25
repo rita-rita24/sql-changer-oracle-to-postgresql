@@ -1,7 +1,8 @@
+import { appFile } from "./app-config.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
-const html = readFileSync("index.html", "utf8");
+const html = readFileSync(appFile, "utf8");
 const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
 

@@ -1,0 +1,46 @@
+{
+  "sourceSha256": "4f7dbfa194c86fdb0b94f2152c62deec7cc6a269b4c66ddeabe4fef221358b1d",
+  "baseline": {
+    "total": 3027,
+    "equivalent": 2322,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 690,
+    "silentMismatches": 479,
+    "silentExecutionErrors": 149,
+    "sourceErrors": 0
+  },
+  "defaultComparison": {
+    "total": 3027,
+    "equivalent": 3012,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 0,
+    "silentMismatches": 0,
+    "silentExecutionErrors": 0,
+    "sourceErrors": 0
+  },
+  "additionalSeeds": [
+    17,
+    99
+  ],
+  "expandedComparison": {
+    "total": 3645,
+    "equivalent": 3630,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 0,
+    "silentMismatches": 0,
+    "silentExecutionErrors": 0,
+    "sourceErrors": 0
+  },
+  "unitTests": 233,
+  "browserTests": 207,
+  "mutationSmoke": {
+    "killed": 11,
+    "total": 11
+  },
+  "postgresChecks": 27,
+  "staticUiUnchanged": true,
+  "knownPolicyExceptionsAdded": 0
+}

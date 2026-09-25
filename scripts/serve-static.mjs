@@ -1,6 +1,7 @@
 import { createReadStream, existsSync, statSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { extname, basename, resolve } from "node:path";
+import { appFile } from "./app-config.mjs";
 
 const root = resolve(".");
 const port = Number(process.env.PORT || 4173);
@@ -17,13 +18,8 @@ function resolveRequestPath(urlPath) {
   let decoded;
   try { decoded = decodeURIComponent(urlPath.split("?")[0]); } catch { return null; }
   // Preview serves only the distributable app, never development files/secrets.
-  if (decoded !== "/" && decoded !== "/index.html") return null;
-  const safePath = normalize(decoded).replace(/^(\.\.[/\\])+/, "");
-  const filePath = resolve(join(root, safePath === "/" ? "index.html" : safePath));
-  if (filePath !== root && !filePath.startsWith(`${root}${sep}`)) {
-    return null;
-  }
-  return filePath;
+  if (!["/", "/index.html", "/sql-changer-oracle-to-postgresql.html", `/${basename(appFile)}`].includes(decoded)) return null;
+  return resolve(appFile);
 }
 
 createServer((request, response) => {
@@ -38,7 +34,10 @@ createServer((request, response) => {
     "content-type": contentTypes.get(extname(filePath)) || "application/octet-stream",
     "cache-control": "no-store"
   });
-  createReadStream(filePath).pipe(response);
+  const stream = createReadStream(filePath);
+  stream.on("error", () => response.destroy());
+  response.on("close", () => stream.destroy());
+  stream.pipe(response);
 }).listen(port, "127.0.0.1", () => {
   console.log(`Serving ${root} on http://127.0.0.1:${port}`);
 });

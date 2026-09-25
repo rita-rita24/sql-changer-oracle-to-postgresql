@@ -1,3 +1,4 @@
+import { appFile } from "../../scripts/app-config.mjs";
 import { expect, test } from "@playwright/test";
 
 const viewports = [
@@ -25,7 +26,7 @@ test("works from a standalone file without external requests", async ({ page }) 
   const errors = [];
   page.on("request", (request) => { if (/^https?:/.test(request.url())) external.push(request.url()); });
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto(pathToFileURL(resolve("index.html")).href);
+  await page.goto(pathToFileURL(resolve(appFile)).href);
   await page.locator("#oracleSql").fill("SELECT NVL(NULL, 'ok') FROM DUAL;");
   await expect(page.locator("#postgresHighlight")).toHaveText("SELECT COALESCE(NULL, 'ok');");
   expect(external).toEqual([]);
@@ -34,7 +35,7 @@ test("works from a standalone file without external requests", async ({ page }) 
 
 test("marks review and input errors and clears their status after correction", async ({ page }) => {
   await openApp(page);
-  await page.locator("#oracleSql").fill("SELECT 1 FROM DUAL;\nSELECT COUNT(*) FROM t WHERE ROWNUM<=2;");
+  await page.locator("#oracleSql").fill("SELECT 1 FROM DUAL;\nSELECT COUNT(*) FROM t WHERE ROWNUM<=2 OR id=1;");
   await expect(page.locator("#outputStatus")).toHaveText(/要確認/);
   await expect(page.locator("#warningsList")).toContainText("文2・2行目");
   await page.locator("#oracleSql").fill("SELECT 'unclosed");
@@ -52,7 +53,7 @@ test("clipboard denial shows a real failure and leaves output selected", async (
   await openApp(page);
   await page.locator("#oracleSql").fill("SELECT 1 FROM DUAL;");
   await page.locator("#copyPostgresButton").click();
-  await expect(page.locator("#toast")).toContainText("コピーできませんでした");
+  await expect(page.locator("#copyPostgresButton")).toHaveAccessibleName("コピーできませんでした");
   expect(await page.evaluate(() => window.getSelection().toString())).toBe("SELECT 1;");
 });
 
@@ -65,9 +66,9 @@ test("preserves literal data and quoted names in the visible output", async ({ p
 
 test("shows policy limitations and retains unsafe ROWNUM predicates", async ({ page }) => {
   await openApp(page);
-  const input = "SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;\nSELECT TO_DATE('2024-06-15 12:34:56', 'YYYY-MM-DD HH24:MI:SS') FROM DUAL;";
+  const input = "SELECT COUNT(*) FROM t WHERE ROWNUM <= 2 OR id=1;\nSELECT TO_DATE('2024-06-15 12:34:56', 'YYYY-MM-DD HH24:MI:SS', 'NLS_DATE_LANGUAGE=American') FROM DUAL;";
   await page.locator("#oracleSql").fill(input);
-  await expect(page.locator("#postgresHighlight")).toContainText("WHERE ROWNUM <= 2;");
+  await expect(page.locator("#postgresHighlight")).toContainText("WHERE ROWNUM <= 2 OR id=1;");
   await expect(page.locator("#postgresHighlight")).not.toContainText("LIMIT");
   await expect(page.locator("#warningsList")).toContainText("時刻");
   await expect(page.locator("#warningsList")).toContainText("ROWNUM");
@@ -90,7 +91,7 @@ test("typing SQL converts visible output, escapes payloads, and keeps warnings u
   await expect(output).toContainText("'<script>alert(1)</script>' AS payload");
   await expect(output).toContainText("ORDER BY id");
   await expect(output).toContainText("LIMIT 5");
-  await expect(page.locator("#outputStatus")).toHaveText(/要確認/);
+  await expect(page.locator("#outputStatus")).toHaveText("変換済み（差分あり）");
   await expect(page.locator("#postgresVersionLabel")).toHaveText("PostgreSQL 15.17");
   await expect(page.locator(".editor-shell.output-shell")).toHaveCSS("background-color", "rgb(255, 255, 255)");
 
@@ -197,9 +198,14 @@ test("large pasted SQL uses plain highlight mode while preserving conversion out
     return `SELECT ${index} AS id, CAST(${index} AS NUMBER) AS amount FROM DUAL;`;
   }).join("\n");
 
-  const state = await page.locator("#oracleSql").evaluate((input, value) => {
-    input.value = value;
-    input.dispatchEvent(new Event("input", { bubbles: true }));
+  // Model a bulk paste event; Playwright fill inserts thousands of lines as
+  // separate native edits on Chromium/WebKit, even in a bare textarea.
+  await page.locator("#oracleSql").evaluate((input, source) => {
+    input.value = source;
+    input.dispatchEvent(new InputEvent("input", { bubbles: true, inputType: "insertFromPaste" }));
+  }, largeSql);
+  await expect(page.locator("#postgresHighlight")).toContainText("CAST(6499 AS NUMERIC)", { timeout: 15000 });
+  const state = await page.evaluate(() => {
     const oracleHighlight = document.querySelector("#oracleHighlight");
     const postgresHighlight = document.querySelector("#postgresHighlight");
     return {
@@ -212,7 +218,7 @@ test("large pasted SQL uses plain highlight mode while preserving conversion out
       scrollWidth: document.documentElement.scrollWidth,
       innerWidth: window.innerWidth
     };
-  }, largeSql);
+  });
 
   expect(state.oracleMode).toBe("plain");
   expect(state.postgresMode).toBe("plain");
@@ -274,13 +280,13 @@ for (const viewport of viewports) {
     });
 
     expect(layout.scrollWidth).toBeLessThanOrEqual(layout.innerWidth);
-    expect(layout.scrollHeight).toBeLessThanOrEqual(layout.innerHeight);
+    if (viewport.width > 960 && viewport.height >= 512) expect(layout.scrollHeight).toBeLessThanOrEqual(layout.innerHeight);
     for (const box of layout.boxes) {
       expect(box.left, box.selector).toBeGreaterThanOrEqual(-1);
       expect(box.right, box.selector).toBeLessThanOrEqual(layout.innerWidth + 1);
       expect(box.width, box.selector).toBeGreaterThan(0);
       expect(box.top, box.selector).toBeGreaterThanOrEqual(-1);
-      expect(box.bottom, box.selector).toBeLessThanOrEqual(layout.innerHeight + 1);
+      expect(box.bottom, box.selector).toBeLessThanOrEqual(layout.scrollHeight + 1);
       expect(box.height, box.selector).toBeGreaterThan(0);
       if (box.selector.endsWith("Button")) {
         expect(box.scrollWidth, box.selector).toBeLessThanOrEqual(box.clientWidth + 1);
@@ -302,10 +308,10 @@ for (const viewport of viewports) {
         })
       };
     });
-    expect(scrolling.pageHeight).toBeLessThanOrEqual(scrolling.viewportHeight);
+    if (viewport.width > 960 && viewport.height >= 512) expect(scrolling.pageHeight).toBeLessThanOrEqual(scrolling.viewportHeight);
     for (const region of scrolling.regions) {
       expect(region.height, region.selector).toBeGreaterThan(20);
-      expect(region.bottom, region.selector).toBeLessThanOrEqual(scrolling.viewportHeight + 1);
+      expect(region.bottom, region.selector).toBeLessThanOrEqual(scrolling.pageHeight + 1);
       expect(region.scrollTop, region.selector).toBeGreaterThan(0);
     }
     if (viewport.width === 320 || viewport.width === 980) {

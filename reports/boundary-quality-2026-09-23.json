@@ -1,0 +1,214 @@
+{
+  "sourceFile": "sql-changer-oracle-to-postgresql.html",
+  "sourceSha256": "55f0dea94391b313cc280569e4567f32b5f0778f4c539be00957db78905e546c",
+  "baselineSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+  "unit": {
+    "passed": 219,
+    "failed": 0
+  },
+  "newRegression": {
+    "total": 17,
+    "failedBefore": 17,
+    "passedAfter": 17
+  },
+  "browsers": {
+    "startTime": "2026-09-22T15:49:23.515Z",
+    "duration": 107815.826,
+    "expected": 204,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "database": {
+    "total": 345,
+    "equivalent": 330,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 0
+  },
+  "postgres": {
+    "passed": 27,
+    "fixes": 26,
+    "policyLimitations": 1
+  },
+  "repairedDatabaseCases": [
+    "boundary-decode-text-null",
+    "boundary-decode-text-empty",
+    "boundary-decode-date-null",
+    "boundary-decode-search-function",
+    "boundary-decode-later-null",
+    "boundary-nvl-fraction",
+    "boundary-nvl-negative-fraction",
+    "boundary-nvl2-fraction",
+    "boundary-decode-fraction-result",
+    "boundary-decode-fraction-pair",
+    "boundary-to-char-trunc",
+    "boundary-to-char-round",
+    "boundary-to-char-abs",
+    "boundary-to-char-mod",
+    "boundary-to-char-power",
+    "boundary-to-char-nested-numeric",
+    "boundary-concat-null-number",
+    "boundary-concat-null-number-left",
+    "boundary-concat-fraction",
+    "boundary-concat-numeric-pair",
+    "boundary-concat-precedence-left",
+    "boundary-arithmetic-text-product",
+    "boundary-arithmetic-empty-product",
+    "boundary-date-difference",
+    "boundary-date-difference-negative",
+    "boundary-date-difference-format",
+    "boundary-date-difference-time",
+    "boundary-date-difference-trunc",
+    "boundary-date-difference-dst"
+  ],
+  "performance": [
+    {
+      "name": "repeated-6500",
+      "characters": 195000,
+      "beforeMs": 2188.6,
+      "afterMs": 211.73,
+      "outputIdentical": true
+    },
+    {
+      "name": "distinct-1500",
+      "characters": 48389,
+      "beforeMs": 393.4,
+      "afterMs": 362.12,
+      "outputIdentical": true
+    }
+  ],
+  "uiPreservation": {
+    "baselineSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+    "sourceSha256": "55f0dea94391b313cc280569e4567f32b5f0778f4c539be00957db78905e546c",
+    "headAndStylesEqual": true,
+    "bodyMarkupEqual": true,
+    "comparisons": [
+      {
+        "width": 1280,
+        "theme": "light",
+        "filled": false,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      },
+      {
+        "width": 1280,
+        "theme": "light",
+        "filled": true,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      },
+      {
+        "width": 1280,
+        "theme": "dark",
+        "filled": false,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      },
+      {
+        "width": 1280,
+        "theme": "dark",
+        "filled": true,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      },
+      {
+        "width": 390,
+        "theme": "light",
+        "filled": false,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      },
+      {
+        "width": 390,
+        "theme": "light",
+        "filled": true,
+        "buttonsEqual": true,
+        "pixelsEqual": false,
+        "pixelDifference": {
+          "changedPixels": 3,
+          "maxChannelDifference": 1,
+          "boundingBox": [
+            371,
+            444,
+            373,
+            463
+          ]
+        }
+      },
+      {
+        "width": 390,
+        "theme": "dark",
+        "filled": false,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      },
+      {
+        "width": 390,
+        "theme": "dark",
+        "filled": true,
+        "buttonsEqual": true,
+        "pixelsEqual": true
+      }
+    ]
+  },
+  "mutation": {
+    "detected": 11,
+    "total": 11
+  },
+  "release": {
+    "version": "0.2.1",
+    "sourceSha256": "55f0dea94391b313cc280569e4567f32b5f0778f4c539be00957db78905e546c",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true,
+        "startedAt": "2026-09-22T15:49:18.319Z",
+        "finishedAt": "2026-09-22T15:49:18.597Z"
+      },
+      {
+        "name": "check:syntax",
+        "passed": true,
+        "startedAt": "2026-09-22T15:49:18.598Z",
+        "finishedAt": "2026-09-22T15:49:20.626Z"
+      },
+      {
+        "name": "test:unit",
+        "passed": true,
+        "startedAt": "2026-09-22T15:49:20.626Z",
+        "finishedAt": "2026-09-22T15:49:22.375Z"
+      },
+      {
+        "name": "test:e2e",
+        "passed": true,
+        "startedAt": "2026-09-22T15:49:22.375Z",
+        "finishedAt": "2026-09-22T15:51:11.367Z"
+      },
+      {
+        "name": "test:mutation",
+        "passed": true,
+        "startedAt": "2026-09-22T15:51:11.367Z",
+        "finishedAt": "2026-09-22T15:51:17.452Z"
+      },
+      {
+        "name": "test:databases",
+        "passed": true,
+        "startedAt": "2026-09-22T15:51:17.452Z",
+        "finishedAt": "2026-09-22T15:51:29.601Z"
+      }
+    ],
+    "databaseComparison": {
+      "total": 345,
+      "equivalent": 330,
+      "policyExceptions": 4,
+      "rejectedInputs": 11,
+      "failed": 0
+    },
+    "oracleVersion": "Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free\nVersion 23.26.3.0.0",
+    "postgresVersion": "15.17 (Debian 15.17-1.pgdg13+1)",
+    "builtAt": "2026-09-22T15:51:29.609Z"
+  },
+  "legacyGeneratedHtmlRemoved": true,
+  "databaseCleanupComplete": true,
+  "validationEnvironmentRestored": "sql-changer-validation stopped"
+}

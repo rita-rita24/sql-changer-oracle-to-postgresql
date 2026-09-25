@@ -1,0 +1,55 @@
+{
+  "sourceSha256": "f6cc6a051c86288c528417957382a146d9131472e169ac5e5a5ca88c2cda550c",
+  "checks": [
+    {
+      "name": "lint",
+      "passed": true
+    },
+    {
+      "name": "check:syntax",
+      "passed": true
+    },
+    {
+      "name": "test:unit",
+      "passed": true
+    },
+    {
+      "name": "test:e2e",
+      "passed": true
+    },
+    {
+      "name": "test:mutation",
+      "passed": true
+    },
+    {
+      "name": "test:databases",
+      "passed": true,
+      "startedAt": "2026-09-23T01:12:43.314Z",
+      "finishedAt": "2026-09-23T01:12:59.384Z"
+    }
+  ],
+  "unitTests": 242,
+  "browserTests": 216,
+  "mutantsKilled": 13,
+  "before": {
+    "total": 113,
+    "equivalent": 22,
+    "policyExceptions": 0,
+    "rejectedInputs": 0,
+    "failed": 91,
+    "silentMismatches": 0,
+    "silentExecutionErrors": 64,
+    "sourceErrors": 0
+  },
+  "after": {
+    "total": 3140,
+    "equivalent": 3125,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 0,
+    "silentMismatches": 0,
+    "silentExecutionErrors": 0,
+    "sourceErrors": 0
+  },
+  "verificationNote": "The first five checks passed in the release run. The application source stayed unchanged. After isolating the new database fixtures and verifying DDL through the resulting table schema, the complete database corpus was rerun successfully."
+}

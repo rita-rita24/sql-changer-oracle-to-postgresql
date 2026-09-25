@@ -1,0 +1,350 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QA Test Report - SQL変換</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --text: #17202a;
+      --muted: #5f6b7a;
+      --border: #d8dee8;
+      --p0: #b42318;
+      --p1: #b54708;
+      --p2: #175cd3;
+      --ok: #067647;
+      --fail: #b42318;
+      --warn: #b54708;
+      --pending: #475467;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+    }
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 28px 0 44px;
+    }
+    h1, h2, h3 { line-height: 1.25; }
+    h1 { margin: 0 0 6px; font-size: 30px; }
+    h2 { margin: 28px 0 12px; font-size: 20px; }
+    h3 { margin: 18px 0 8px; font-size: 16px; }
+    p { margin: 8px 0; }
+    .muted { color: var(--muted); }
+    .panel {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.05);
+    }
+    .risk-panel {
+      border-color: #f7b27a;
+      background: #fff7ed;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .metric {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fbfcfe;
+    }
+    .metric strong {
+      display: block;
+      font-size: 22px;
+      line-height: 1.2;
+    }
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--surface);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      min-width: 840px;
+    }
+    th, td {
+      border-bottom: 1px solid var(--border);
+      padding: 10px;
+      text-align: left;
+      vertical-align: top;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+    th {
+      background: #eef2f7;
+      font-size: 13px;
+      color: #344054;
+    }
+    tr:last-child td { border-bottom: 0; }
+    code {
+      padding: 1px 4px;
+      border-radius: 4px;
+      background: #eef2f7;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.92em;
+    }
+    .badge {
+      display: inline-block;
+      min-width: 48px;
+      border-radius: 999px;
+      padding: 2px 8px;
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .p0 { background: var(--p0); }
+    .p1 { background: var(--p1); }
+    .p2 { background: var(--p2); }
+    .ok { background: var(--ok); }
+    .fail { background: var(--fail); }
+    .warn { background: var(--warn); }
+    .pending { background: var(--pending); }
+    .small { font-size: 13px; }
+    @media print {
+      body { background: #fff; }
+      main { width: 100%; padding: 0; }
+      .panel, .table-wrap { box-shadow: none; }
+      table { min-width: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="panel">
+      <h1>QA Test Report</h1>
+      <p class="muted">対象: Oracle SQL から PostgreSQL SQL への単一HTML変換ツール</p>
+      <p class="muted">出力日: 2026-06-14</p>
+      <div class="grid">
+        <div class="metric"><span>追加したテスト数</span><strong>22</strong><span class="small">単体10 + E2E12</span></div>
+        <div class="metric"><span>見つけたバグ数</span><strong>8</strong><span class="small">P1中心</span></div>
+        <div class="metric"><span>修正したバグ数</span><strong>8</strong><span class="small">再発防止テスト追加済み</span></div>
+        <div class="metric"><span>残P0/P1リスク</span><strong>0</strong><span class="small">P0/P1なし</span></div>
+      </div>
+    </section>
+
+    <section class="panel risk-panel">
+      <h2>未対応の上位リスク</h2>
+      <p><span class="badge ok">解消</span> P0/P1の残リスクはありません。関数意味差は警告または安全な変換に倒し、巨大入力はplain highlightへ切り替えるようにしました。</p>
+      <p><span class="badge p2">P2</span> 残る主な改善余地は、Firefox/WebKitでの追加E2E、SQLパーサのモジュール分離、より多くのgolden fixtureです。</p>
+    </section>
+
+    <h2>1. Executive Summary</h2>
+    <div class="panel">
+      <p>リポジトリ全体を読み取り専用で調査した結果、構成は <code>index.html</code> のみで、既存テスト、package設定、CI設定はありませんでした。対象機能は、SQL変換、構文ハイライト、警告表示、コピー/クリア操作、キーボード入力、レスポンシブ表示です。</p>
+      <p>追加したテストは、変換ロジックの単体/境界値/簡易propertyテスト10件、ブラウザE2E/レスポンシブ/IME/巨大入力テスト12件です。文字列・コメント内の変換破壊、ROWNUM変換の壊れたSQL、DECODE NULL意味差、TRUNC/MONTHS_BETWEENの意味差、モバイル横溢れ、IME/Shift+Tab誤処理、アクセシブル名不足、巨大入力ハイライト負荷を検出し、すべて修正しました。</p>
+      <p>次にやるべきことは、SQLパーサの責務分離、golden fixture拡充、Firefox/WebKitでの追加E2E、CI設定です。</p>
+    </div>
+
+    <h2>2. 自動抽出した機能一覧</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>優先度</th><th>機能</th><th>関連ファイル</th><th>リスク理由</th><th>推奨テスト種別</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge p1">P1</span></td><td>Oracle SQL を PostgreSQL SQL に変換する主要フロー</td><td><code>index.html:1739</code></td><td>誤変換がユーザーの実行SQLを破壊する。特にリテラル、コメント、ROWNUM、関数変換が高リスク。</td><td>単体、境界値、簡易property、mutation</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>SQL文字列/コメント/引用識別子の保護</td><td><code>index.html:664</code>、<code>index.html:686</code>、<code>index.html:756</code></td><td>保護されないと、文字列内の <code>NEXTVAL</code> や <code>TABLESPACE</code> が実SQLとして変換される。</td><td>単体、property、mutation</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>ROWNUM から LIMIT への変換</td><td><code>index.html:1587</code>、<code>index.html:1638</code></td><td>WHERE句の途中にLIMITを挿入するとPostgreSQLとして無効なSQLになる。</td><td>単体、E2E</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>TRUNC / MONTHS_BETWEEN 関数変換</td><td><code>index.html:1353</code>、<code>index.html:1377</code></td><td>OracleとPostgreSQLで型オーバーロードや小数月セマンティクスが異なり、黙って近似すると結果が変わる。</td><td>単体、mutation</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>構文ハイライトとXSS耐性</td><td><code>index.html:790</code>、<code>index.html:1841</code></td><td>SQL入力がHTMLとして解釈されるとDOM XSSになる。現状はエスケープ実装あり。</td><td>セキュリティ単体、E2E</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>巨大SQL貼り付け時の描画</td><td><code>index.html:874</code></td><td>大量のspanを同期生成すると入力後にブラウザが固まる可能性がある。</td><td>E2E、mutation</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>IME/キーボード入力</td><td><code>index.html:1853</code></td><td>IME変換中のTabやShift+Tabを奪うと日本語入力とキーボード移動を壊す。</td><td>E2E、synthetic keyboard event</td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>モバイル/タブレット/デスクトップ表示</td><td><code>index.html:65</code>、<code>index.html:122</code>、<code>index.html:131</code></td><td>主要操作が横スクロールや見切れで使えなくなる。</td><td>viewport別E2E、bounding box、scrollWidth検証</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>コピー/クリア操作</td><td><code>index.html:1811</code>、<code>index.html:1822</code></td><td>状態が古いまま残る、またはコピー対象が空になる可能性がある。</td><td>E2E、clipboard stub</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>警告ドロワー/トースト表示</td><td><code>index.html:1775</code></td><td>警告の表示漏れ、HTML注入、状態の消し忘れがユーザー判断を誤らせる。</td><td>単体、E2E、DOM状態検証</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>3. 追加したテスト</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>種別</th><th>対象</th><th>テスト内容</th><th>目的</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td>Unit</td><td>SQL保護範囲</td><td>文字列、コメント、引用識別子内の <code>NUMBER</code>/<code>DATE</code>/<code>FROM DUAL</code> を保持</td><td>静かなSQL破壊を検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>シーケンス/ストレージ句</td><td>リテラル内の <code>MYSEQ.NEXTVAL</code> と <code>TABLESPACE</code> を保持し、実コードだけ変換</td><td>文字列破壊と過剰削除の検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>関数呼び出し</td><td>コメント/文字列内の <code>DECODE(...)</code> は変換せず、実関数のみCASEへ変換</td><td>関数名スキャンの誤爆検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>DECODE NULL</td><td><code>DECODE(status, NULL, ...)</code> を <code>IS NULL</code> へ変換</td><td>Oracle NULL意味差の検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>ROWNUM + ORDER BY</td><td><code>WHERE ROWNUM &lt;= 10 ORDER BY</code> を末尾 <code>LIMIT 10</code> に移動</td><td>壊れたSQL生成の検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>ROWNUM中間条件</td><td><code>active AND ROWNUM AND deleted</code> の前後条件を保持</td><td>フィルタ欠落/順序崩れ検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>TRUNCオーバーロード</td><td>数値は <code>trunc</code>、日付書式は <code>date_trunc</code> に分け、数値に <code>date_trunc</code> を生成しない</td><td>関数意味差と無効SQLの検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit</td><td>MONTHS_BETWEEN</td><td>Oracle固有の小数月セマンティクスを自動近似せず警告に倒す</td><td>黙った計算結果変更の検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Unit Security</td><td>ハイライト</td><td><code>&lt;img onerror&gt;</code> がHTMLではなくテキストとして表示されることを検証</td><td>DOM XSS回帰検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>Property-like Unit</td><td>危険文字列payload</td><td>日本語、絵文字、ゼロ幅文字、HTML、SQLキーワードをリテラルとして反復検証</td><td>入力揺らぎへの耐性確認</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E</td><td>入力→変換→表示</td><td>SQL入力後、表示テキスト、LIMIT位置、HTMLエスケープ、ステータスを検証</td><td>実ブラウザ統合バグ検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E</td><td>コピー/クリア</td><td>clipboard stub、ダブルクリッククリア、フォーカス、警告非表示を検証</td><td>状態更新と重複操作の検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E</td><td>IME/キーボード</td><td>IME変換中Tab、Shift+Tab、通常Tabを分離検証</td><td>日本語入力・キーボード移動の破壊検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E</td><td>巨大SQL貼り付け</td><td>約6500行のSQLでplain highlight modeへ切り替わり、変換結果と横幅が維持されることを検証</td><td>大きい入力でのUIフリーズ/DOM肥大化検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>320x568</td><td>横溢れ、主要要素の画面内収まり、スクリーンショット</td><td>最小幅の操作不能検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>375x667</td><td>横溢れとボタン幅を検証</td><td>実機相当の横スクロール検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>390x844</td><td>横溢れと主要領域の境界を検証</td><td>スマホ標準幅の崩れ検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>430x932</td><td>横溢れと主要領域の境界を検証</td><td>大きめスマホ幅の崩れ検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>768x1024</td><td>タブレット縦幅のスタック表示を検証</td><td>ブレークポイント崩れ検出</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>1024x768</td><td>デスクトップ寄り幅の2ペイン表示を検証</td><td>ブレークポイント境界確認</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>1280x800</td><td>デスクトップ幅、スクリーンショット</td><td>広幅表示の基準確認</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>E2E Responsive</td><td>667x375</td><td>低高さ/横向き相当で主要操作が画面内にあることを検証</td><td>低高さviewport崩れ検出</td><td><span class="badge ok">成功</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>4. 見つけたバグ</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>優先度</th><th>バグ</th><th>原因</th><th>影響</th><th>状態</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge p1">P1</span></td><td>文字列、コメント、引用識別子内のSQL語が変換される</td><td>グローバル正規表現がSQLの保護範囲を考慮していなかった</td><td>表示用文字列や識別子が破壊され、実行SQLが意図と変わる</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>リテラル内の <code>MYSEQ.NEXTVAL</code> や <code>TABLESPACE</code> が変換/削除される</td><td>シーケンス変換とストレージ句削除も保護範囲を見ていなかった</td><td>SQL構文エラーまたはデータ値破壊</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td><code>ROWNUM</code> がWHERE句途中に <code>LIMIT</code> として挿入される</td><td>単純置換でSQL句の位置関係を扱っていた</td><td>PostgreSQLとして無効なSQLを出力</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td><code>DECODE(..., NULL, ...)</code> が <code>= NULL</code> になる</td><td>Oracle DECODEのNULL一致をCASE変換で考慮していなかった</td><td>NULL時の分岐が一致しない</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td><code>TRUNC(amount)</code> が日付用 <code>date_trunc</code> に変換される</td><td>Oracleの数値/日付オーバーロードを区別していなかった</td><td>数値カラムでPostgreSQLとして無効なSQLを出力</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td><code>MONTHS_BETWEEN</code> を整数月差へ近似する</td><td>Oracleの小数月/月末ルールを近似式で置き換えていた</td><td>日付差分の計算結果が黙って変わる</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>375/390/430px幅で横スクロールが発生</td><td>brand/main/paneの最小幅がフレックス/グリッドを押し広げていた</td><td>モバイルで主要操作が画面外へ出る</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>IME変換中TabとShift+Tabがエディタのインデント処理に奪われる</td><td>keydown handlerが <code>isComposing</code>/<code>keyCode 229</code>/<code>shiftKey</code> を見ていなかった</td><td>日本語入力やキーボードフォーカス移動を妨げる</td><td><span class="badge ok">修正済み</span></td></tr>
+          <tr><td><span class="badge p1">P1</span></td><td>巨大入力で構文ハイライトが大量spanを同期生成する</td><td>入力サイズに関係なく <code>highlightSql</code> を実行していた</td><td>MB級貼り付けでブラウザが固まる可能性</td><td><span class="badge ok">修正済み</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>5. 修正したバグ</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>バグ</th><th>修正内容</th><th>追加した再発防止テスト</th><th>結果</th></tr></thead>
+        <tbody>
+          <tr><td>保護範囲外変換の欠如</td><td><code>getSqlProtectedRanges</code>、<code>replaceOutsideSqlLiterals</code>、<code>matchesOutsideSqlLiterals</code> を追加</td><td>リテラル/コメント/引用識別子保持、property-like payload、mutation guard</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>シーケンス/ストレージ句のリテラル破壊</td><td><code>convertSequences</code>、<code>removeStorageClauses</code> を保護範囲対応に変更</td><td>sequence-like text、storage literal保持テスト</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>ROWNUMの壊れたLIMIT</td><td>SELECT文のROWNUM条件を取り除いて文末へ <code>LIMIT</code> を追加。非SELECTは警告に変更</td><td>ORDER BY、WHERE中間条件、E2E変換表示</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>DECODE NULL意味差</td><td>検索値が <code>NULL</code> の場合は <code>IS NULL</code> を生成</td><td>DECODE NULL単体テスト</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>TRUNCオーバーロード誤変換</td><td>日付らしい引数/日付書式だけ <code>date_trunc</code>、数値は <code>trunc</code>、未知書式は警告へ変更</td><td>TRUNC overload単体テスト、mutation</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>MONTHS_BETWEENの黙った近似</td><td>自動近似をやめ、元関数を保持して手動確認警告を出す</td><td>MONTHS_BETWEEN単体テスト、mutation</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>モバイル横溢れ</td><td><code>.brand</code> に折り返し、<code>h1</code>/<code>main</code>/<code>.pane</code> に <code>min-width:0</code> を追加</td><td>8 viewport E2E、scrollWidth/bounding box、320/1280 screenshot</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>IME/Shift+Tab誤処理とアクセシブル名不足</td><td><code>isImeComposing</code> を追加し、Shift+Tabは捕捉しない。Oracle textareaへ <code>aria-label</code> を追加</td><td>IME/keyboard E2E、lint-html</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td>巨大入力時の同期ハイライト負荷</td><td>120000文字超の入力/出力はtokenizeせず <code>textContent</code> でplain表示し、変換値は保持</td><td>巨大貼り付けE2E、mutation</td><td><span class="badge ok">成功</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>6. Coverage結果</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>対象</th><th>Line Coverage</th><th>Branch Coverage</th><th>未カバーリスク</th><th>評価</th></tr></thead>
+        <tbody>
+          <tr><td><code>tests/unit/sql-converter.test.mjs</code></td><td>100.00%</td><td>100.00%</td><td>テストファイル自体の計測。production scriptではない。</td><td><span class="badge ok">成功</span></td></tr>
+          <tr><td><code>tests/helpers/load-app.mjs</code></td><td>73.39%</td><td>71.43%</td><td>DOM stubの未使用分岐が残る。P0/P1実挙動には直接影響しない。</td><td><span class="badge warn">要確認</span></td></tr>
+          <tr><td>all files (Node native coverage)</td><td>87.21%</td><td>90.48%</td><td>Node標準coverageは <code>index.html</code> 内のVM実行スクリプトを対象に含めなかった。</td><td><span class="badge warn">制約あり</span></td></tr>
+          <tr><td>変更本体 <code>index.html</code></td><td>未計測</td><td>未計測</td><td>代替として単体10件、E2E12件、mutation smoke 6件でP1変更を検証。</td><td><span class="badge warn">代替検証</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>7. Mutation Testing結果</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>対象</th><th>Mutation Score</th><th>Survived Mutants</th><th>対応</th><th>残リスク</th></tr></thead>
+        <tbody>
+          <tr><td>変換/描画ロジックの重要6変異: VARCHAR2無効化、保護範囲guard除去、LIMIT追記除去、TRUNC誤変換復活、MONTHS_BETWEEN近似復活、巨大入力plain mode無効化</td><td>100% (6/6 killed)</td><td>0</td><td><code>npm run test:mutation</code> で確認</td><td>簡易mutationであり、Stryker等の網羅的mutationではない</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>8. レスポンシブ / UI / IME 検証結果</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>対象</th><th>検証viewport / 入力条件</th><th>検証内容</th><th>結果</th><th>残リスク</th></tr></thead>
+        <tbody>
+          <tr><td>viewport一覧</td><td>320x568、375x667、390x844、430x932、768x1024、1024x768、1280x800、667x375</td><td><code>scrollWidth &lt;= innerWidth</code>、主要要素の左右境界、ボタン内文字溢れ</td><td><span class="badge ok">成功</span></td><td>Firefox/WebKitは未実行</td></tr>
+          <tr><td>横スクロール</td><td>全viewport</td><td>意図しない横スクロールなしを検証。初回は375/390/430pxで失敗し修正済み。</td><td><span class="badge ok">成功</span></td><td>フォントロード失敗時のアイコン文字幅は追加余地あり</td></tr>
+          <tr><td>モーダル/ドロワー/ポップオーバー</td><td>警告drawer、toast。モーダル/ポップオーバーは実装なし</td><td>drawer非表示状態、クリア後非表示、主要要素の画面内収まりを検証</td><td><span class="badge ok">成功</span></td><td>警告が大量のときの縦スクロールは追加検証余地あり</td></tr>
+          <tr><td>IME入力</td><td><code>isComposing: true</code>、<code>keyCode/which: 229</code>、Tab</td><td>IME変換中Tabで値変更/PreventDefaultが起きないこと、通常Tabだけインデントすること</td><td><span class="badge ok">成功</span></td><td>実OSの日本語IME手動確認は未実施</td></tr>
+          <tr><td>キーボード操作</td><td>Shift+Tab、通常Tab</td><td>Shift+Tabを捕捉しない。通常Tabは2スペース挿入。</td><td><span class="badge ok">成功</span></td><td>フォーカス順序全体の網羅は未実施</td></tr>
+          <tr><td>巨大SQL貼り付け</td><td>6500行のSQL</td><td>120000文字超でinput/outputともplain highlight modeとなり、変換結果、ステータス、横幅が維持されることを検証</td><td><span class="badge ok">成功</span></td><td>in-app Browserでは仮想クリップボード未導入で大文字列fill不可。Playwright E2Eで検証済み。</td></tr>
+          <tr><td>スクリーンショット確認</td><td>320x568、1280x800</td><td><code>test-results/.../layout-320x568.png</code> と <code>layout-1280x800.png</code> を生成</td><td><span class="badge ok">成功</span></td><td>成果物は <code>test-results/</code> に生成、Git管理対象外</td></tr>
+          <tr><td>in-app Browser確認</td><td>375x667</td><td>変換結果、HTMLエスケープ、フォーカス、横スクロールなしを追加確認</td><td><span class="badge ok">成功</span></td><td>視覚回帰専用比較は未導入</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>9. まだ危険な未カバー箇所</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>優先度</th><th>箇所</th><th>リスク</th><th>理由</th><th>次の対応</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge p2">P2</span></td><td>SQLパーサ全般</td><td>サブクエリ内ROWNUMやコメント内セミコロンなど複雑構文</td><td>完全SQL parserではなく軽量スキャナと正規表現の組み合わせ</td><td>fixtureベースのgolden testを増やす</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>クロスブラウザ</td><td>Firefox/WebKit差分</td><td>今回のE2EはChromiumのみ</td><td>Playwright projectsへFirefox/WebKitを追加しCIで実行</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>10. 実行したコマンドと結果</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>コマンド</th><th>結果</th><th>補足</th></tr></thead>
+        <tbody>
+          <tr><td><code>npm install</code></td><td><span class="badge ok">成功</span></td><td>3 packages added。監査0件。</td></tr>
+          <tr><td><code>npm audit --audit-level=high</code></td><td><span class="badge ok">成功</span></td><td>found 0 vulnerabilities</td></tr>
+          <tr><td><code>npm run test:unit</code></td><td><span class="badge ok">成功</span></td><td>10 passed</td></tr>
+          <tr><td><code>npm run test:e2e</code></td><td><span class="badge ok">成功</span></td><td>12 passed。初回は375/390/430px横溢れと巨大入力plain mode未対応を検出し修正後成功。</td></tr>
+          <tr><td><code>npm test</code></td><td><span class="badge ok">成功</span></td><td>単体10 + E2E12、合計22 passed</td></tr>
+          <tr><td><code>npm run lint</code></td><td><span class="badge ok">成功</span></td><td>duplicate id、inline handler、aria-label、negative letter-spacing、waitForTimeoutを確認</td></tr>
+          <tr><td><code>npm run typecheck</code></td><td><span class="badge ok">成功</span></td><td>Node <code>--check</code> で全mjs構文確認</td></tr>
+          <tr><td><code>npm run build</code></td><td><span class="badge ok">成功</span></td><td><code>index.html</code> のscript compile確認</td></tr>
+          <tr><td><code>npm run test:coverage</code></td><td><span class="badge warn">制約あり</span></td><td>all files line 87.21%、branch 90.48%。inline production scriptはNode標準coverage対象外。</td></tr>
+          <tr><td><code>npm run test:mutation</code></td><td><span class="badge ok">成功</span></td><td>6/6 mutants killed</td></tr>
+          <tr><td>in-app Browser</td><td><span class="badge warn">一部制約</span></td><td>375px幅の通常確認は実施済み。大文字列fillは仮想クリップボード未導入により不可だったため、Playwright E2Eで代替確認。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>11. 変更ファイル一覧</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>ファイル</th><th>変更内容</th><th>理由</th></tr></thead>
+        <tbody>
+          <tr><td><code>.gitignore</code></td><td><code>node_modules/</code>、coverage、test-results、playwright-reportを除外</td><td>実行成果物を管理対象から外すため</td></tr>
+          <tr><td><code>index.html</code></td><td>SQL保護範囲、ROWNUM修正、DECODE NULL修正、TRUNC/MONTHS_BETWEEN修正、巨大入力plain highlight、IME/Shift+Tab修正、aria-label、レスポンシブCSS修正</td><td>検出バグ8件の修正</td></tr>
+          <tr><td><code>package.json</code></td><td>test/lint/typecheck/build/coverage/mutation scripts、Playwright devDependency</td><td>安全に再実行できるテスト基盤</td></tr>
+          <tr><td><code>package-lock.json</code></td><td>依存関係ロック</td><td>Playwrightバージョン固定</td></tr>
+          <tr><td><code>playwright.config.mjs</code></td><td>Chromium E2E、静的サーバー設定</td><td>UI/レスポンシブ/IME検証</td></tr>
+          <tr><td><code>scripts/serve-static.mjs</code></td><td>ローカル静的サーバー</td><td>clipboardなどをlocalhost上で検証</td></tr>
+          <tr><td><code>scripts/lint-html.mjs</code></td><td>HTML静的品質チェック</td><td>アクセシビリティ/安全性の軽量検証</td></tr>
+          <tr><td><code>scripts/build-check.mjs</code></td><td>HTMLとinline scriptの構文確認</td><td>build相当の破損検出</td></tr>
+          <tr><td><code>scripts/mutation-smoke.mjs</code></td><td>重要変異6件の簡易mutation</td><td>テストが実際にバグを検出できるか確認</td></tr>
+          <tr><td><code>tests/helpers/load-app.mjs</code></td><td>HTML scriptをVM上で実行するDOM stub</td><td>単一HTMLアプリを単体テスト可能にするため</td></tr>
+          <tr><td><code>tests/unit/sql-converter.test.mjs</code></td><td>変換/セキュリティ/property-like単体テスト10件</td><td>P1変換バグの再発防止</td></tr>
+          <tr><td><code>tests/e2e/sql-converter.spec.mjs</code></td><td>ブラウザE2E/レスポンシブ/IME/巨大入力テスト12件</td><td>実操作、レイアウト、入力負荷バグの検出</td></tr>
+          <tr><td><code>reports/qa-test-report.html</code></td><td>本HTMLレポート</td><td>依頼された最終成果物</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>12. 次にやるべきこと</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>優先度</th><th>対応内容</th><th>理由</th><th>推奨担当</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge p2">P2</span></td><td>変換ロジックをHTMLから独立モジュールへ分離</td><td>coverage計測、CI、再利用性、保守性が改善する</td><td>Integrator</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>Oracle/PostgreSQL関数変換仕様表を作り、<code>TO_NUMBER</code> などのfixtureを追加</td><td>今後の関数変換追加時に意味差の再発を防ぐ</td><td>Test Architecture + Domain実装</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>5MB級の性能テストとWeb Worker検討</td><td>今回のplain highlightでDOM肥大化は抑えたが、変換処理自体は同期実行のまま</td><td>Frontend + Performance QA</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>Firefox/WebKit E2Eを追加</td><td>ブラウザ差分のUI/clipboard問題を拾える</td><td>UI QA</td></tr>
+          <tr><td><span class="badge p2">P2</span></td><td>CI設定を追加</td><td>追加した品質ゲートを継続運用するため</td><td>DevOps/Integrator</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

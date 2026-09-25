@@ -1,0 +1,74 @@
+{
+  "baselineSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+  "sourceSha256": "55f0dea94391b313cc280569e4567f32b5f0778f4c539be00957db78905e546c",
+  "headAndStylesEqual": true,
+  "bodyMarkupEqual": true,
+  "comparisons": [
+    {
+      "width": 1280,
+      "theme": "light",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": false,
+      "pixelDifference": {
+        "changedPixels": 3,
+        "maxChannelDifference": 1,
+        "boundingBox": [
+          371,
+          444,
+          373,
+          463
+        ]
+      }
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": true
+    }
+  ]
+}

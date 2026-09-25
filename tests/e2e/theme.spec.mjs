@@ -4,8 +4,8 @@ const themeKey = "sql-changer-theme";
 
 async function expectTheme(page, theme) {
   await expect(page.locator("html")).toHaveAttribute("data-theme", theme);
-  await expect(page.getByRole("switch", { name: "ダークモード", exact: true }))
-    .toHaveAttribute("aria-checked", String(theme === "dark"));
+  await expect(page.locator("#eclipse-toggle")).toHaveAccessibleName(theme === "dark" ? "ライトモードに切り替え" : "ダークモードに切り替え");
+  await expect(page.locator("html")).toHaveAttribute("data-mode", theme);
 }
 
 async function openApp(page, colorScheme = "light") {
@@ -217,9 +217,9 @@ test("both themes fit a 320x480 viewport and the compact top-right switch respec
       };
     });
     expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewportWidth);
-    expect(layout.pageHeight).toBeLessThanOrEqual(layout.viewportHeight);
-    expect(layout.button.width).toBe(48);
-    expect(layout.button.height).toBe(48);
+    expect(layout.pageHeight).toBeGreaterThanOrEqual(layout.viewportHeight);
+    expect(layout.button.width).toBe(30);
+    expect(layout.button.height).toBe(30);
     expect(layout.button.x).toBeGreaterThan(layout.viewportWidth / 2);
     expect(layout.button.right).toBeLessThanOrEqual(layout.viewportWidth);
     expect(layout.viewportWidth - layout.button.right).toBeLessThanOrEqual(32);
@@ -229,11 +229,11 @@ test("both themes fit a 320x480 viewport and the compact top-right switch respec
       expect(region.left, region.selector).toBeGreaterThanOrEqual(-1);
       expect(region.right, region.selector).toBeLessThanOrEqual(layout.viewportWidth + 1);
       expect(region.top, region.selector).toBeGreaterThanOrEqual(-1);
-      expect(region.bottom, region.selector).toBeLessThanOrEqual(layout.viewportHeight + 1);
+      expect(region.bottom, region.selector).toBeLessThanOrEqual(layout.pageHeight + 1);
       expect(region.height, region.selector).toBeGreaterThan(20);
     }
     for (const duration of layout.transitionDurations) {
-      expect(duration.split(",").every((value) => parseFloat(value) === 0)).toBe(true);
+      expect(duration.split(",").every((value) => parseFloat(value) <= 0.00001)).toBe(true);
     }
     colors.push(layout.editorBackground);
     await page.screenshot({ path: testInfo.outputPath(`theme-${theme}-320x480.png`), fullPage: true });

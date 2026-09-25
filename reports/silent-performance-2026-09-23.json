@@ -1,0 +1,46 @@
+{
+  "sourceSha256": "4f7dbfa194c86fdb0b94f2152c62deec7cc6a269b4c66ddeabe4fef221358b1d",
+  "method": "3 local runs; diagnostic benchmark, not a fixed timing assertion",
+  "rows": [
+    {
+      "label": "repeated",
+      "inputChars": 75599,
+      "before": {
+        "milliseconds": [
+          33.384,
+          22.798042000000002,
+          32.97720799999999
+        ],
+        "outputChars": 118799
+      },
+      "after": {
+        "milliseconds": [
+          28.83545799999999,
+          23.267083000000014,
+          22.910791999999987
+        ],
+        "outputChars": 647999
+      }
+    },
+    {
+      "label": "unique",
+      "inputChars": 59889,
+      "before": {
+        "milliseconds": [
+          361.597417,
+          354.93925,
+          352.914583
+        ],
+        "outputChars": 162889
+      },
+      "after": {
+        "milliseconds": [
+          393.088792,
+          383.36504200000013,
+          382.61104199999977
+        ],
+        "outputChars": 162889
+      }
+    }
+  ]
+}

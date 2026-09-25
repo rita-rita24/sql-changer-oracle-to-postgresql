@@ -1,0 +1,38 @@
+{
+  "ROW-01": {
+    "sql": "SELECT COUNT(*) FROM (SELECT * FROM t LIMIT 2) AS t;",
+    "status": "converted-unverified"
+  },
+  "ROW-02": {
+    "sql": "SELECT * FROM (SELECT * FROM t LIMIT 2) AS t ORDER BY id;",
+    "status": "converted-unverified"
+  },
+  "TYPE-01": {
+    "sql": "SELECT CAST(123 AS NUMERIC);",
+    "status": "converted-unverified"
+  },
+  "TYPE-02": {
+    "sql": "SELECT COALESCE(flag, CAST(NULLIF('0', '') AS NUMERIC)) FROM (SELECT CAST(1 AS NUMERIC) flag) t;",
+    "status": "converted-unverified"
+  },
+  "FMT-01": {
+    "sql": "SELECT REGEXP_REPLACE(CAST(TRIM_SCALE(CAST(12.34 AS NUMERIC)) AS TEXT), '^(-?)0[.]', '\\1.');",
+    "status": "converted-unverified"
+  },
+  "FMT-02": {
+    "sql": "SELECT CAST(NULLIF(REGEXP_REPLACE(CAST(amount_txt AS TEXT), '^[[:space:]]*[+-]?(nan|inf(inity)?)[[:space:]]*$', '!', 'i'), '') AS NUMERIC) FROM t;",
+    "status": "review-required"
+  },
+  "DATE-01": {
+    "sql": "SELECT MAKE_TIMESTAMP(2024, 6, 15, 12, 34, 56);",
+    "status": "converted-unverified"
+  },
+  "DATE-02": {
+    "sql": "SELECT (TIMESTAMP '2024-06-15' + (1) * INTERVAL '1 day');",
+    "status": "review-required"
+  },
+  "DATE-03": {
+    "sql": "SELECT MAKE_TIMESTAMP((((EXTRACT(YEAR FROM CURRENT_DATE)::integer / 100) + (CASE WHEN MOD(EXTRACT(YEAR FROM CURRENT_DATE)::integer, 100) < 50 THEN -1 ELSE 0 END)) * 100 + 50), 1, 1, 0, 0, 0);",
+    "status": "converted-unverified"
+  }
+}

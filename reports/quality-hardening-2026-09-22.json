@@ -1,0 +1,103 @@
+{
+  "date": "2026-09-22",
+  "sourceFile": "sql-changer-oracle-to-postgresql.html",
+  "sourceSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+  "unit": {
+    "passed": 202,
+    "failed": 0
+  },
+  "addedRegression": {
+    "tests": 15,
+    "baselineFailures": 15,
+    "finalFailures": 0
+  },
+  "browser": {
+    "startTime": "2026-09-22T12:13:37.753Z",
+    "duration": 99518.299,
+    "expected": 186,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "database": {
+    "total": 308,
+    "equivalent": 293,
+    "policyExceptions": 4,
+    "rejectedInputs": 11,
+    "failed": 0
+  },
+  "postgresOnly": {
+    "checks": 27,
+    "fixes": 26,
+    "policyLimitations": 1
+  },
+  "mutation": {
+    "detected": 11,
+    "total": 11
+  },
+  "release": {
+    "version": "0.2.1",
+    "sourceSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+    "checks": [
+      {
+        "name": "lint",
+        "passed": true,
+        "startedAt": "2026-09-22T12:13:35.041Z",
+        "finishedAt": "2026-09-22T12:13:35.245Z"
+      },
+      {
+        "name": "check:syntax",
+        "passed": true,
+        "startedAt": "2026-09-22T12:13:35.245Z",
+        "finishedAt": "2026-09-22T12:13:36.419Z"
+      },
+      {
+        "name": "test:unit",
+        "passed": true,
+        "startedAt": "2026-09-22T12:13:36.419Z",
+        "finishedAt": "2026-09-22T12:13:37.076Z"
+      },
+      {
+        "name": "test:e2e",
+        "passed": true,
+        "startedAt": "2026-09-22T12:13:37.076Z",
+        "finishedAt": "2026-09-22T12:15:17.300Z"
+      },
+      {
+        "name": "test:mutation",
+        "passed": true,
+        "startedAt": "2026-09-22T12:15:17.300Z",
+        "finishedAt": "2026-09-22T12:15:27.406Z"
+      },
+      {
+        "name": "test:databases",
+        "passed": true,
+        "startedAt": "2026-09-22T12:15:27.406Z",
+        "finishedAt": "2026-09-22T12:15:42.340Z"
+      }
+    ],
+    "databaseComparison": {
+      "total": 308,
+      "equivalent": 293,
+      "policyExceptions": 4,
+      "rejectedInputs": 11,
+      "failed": 0
+    },
+    "oracleVersion": "Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free\nVersion 23.26.3.0.0",
+    "postgresVersion": "15.17 (Debian 15.17-1.pgdg13+1)",
+    "builtAt": "2026-09-22T12:15:42.351Z"
+  },
+  "notes": [
+    "Database policy exceptions and rejected inputs are separate from equivalent results.",
+    "Historical working-tree changes were retained.",
+    "No new HTML UI elements, fixed text or buttons."
+  ],
+  "ui": {
+    "bodyMarkupEqual": true,
+    "buttonComparisonsEqual": true,
+    "pixelExactComparisons": 7,
+    "rasterToleranceComparisons": 8,
+    "totalComparisons": 8
+  },
+  "validationEnvironmentStopped": true
+}

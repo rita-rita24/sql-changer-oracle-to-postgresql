@@ -1,3 +1,4 @@
+import { appFile } from "./app-config.mjs";
 // Optional execution checks against a fresh, disposable PostgreSQL 15.17 cluster.
 // Install embedded-postgres@15.17.0-beta.17 separately and set SQL_CHANGER_PG_MODULE
 // to its dist/index.js. Never connects to an existing database or reads credentials.
@@ -89,19 +90,18 @@ try {
   await client.query('CREATE SEQUENCE "MYSEQ"');
   await scalar("quoted-sequence", 'SELECT "MYSEQ".NEXTVAL FROM DUAL;', "1");
 
-  // These differences deliberately remain under the user's unchanged policies.
-  await scalar("policy-numeric-format", "SELECT TO_CHAR(12.34) FROM DUAL;", "12", "policy-limitation");
+  await scalar("numeric-format", "SELECT TO_CHAR(12.34) FROM DUAL;", "12.34");
+  await scalar("arithmetic-format", "SELECT TO_CHAR(1/2) FROM DUAL;", ".5");
   const dated = convert("SELECT TO_DATE('2024-06-15 12:34:56', 'YYYY-MM-DD HH24:MI:SS') FROM DUAL;");
-  assert.ok(dated.warnings.some((w) => w.includes("時刻")));
   const dateRow = (await client.query(`SELECT pg_typeof(d)::text AS type, to_char(d, 'HH24:MI:SS') AS time FROM (${dated.sql.replace(/;\s*$/, "")}) q(d)`)).rows[0];
-  assert.deepEqual(dateRow, { type: "date", time: "00:00:00" });
-  checks.push({ id: "policy-date-time", category: "policy-limitation", sql: dated.sql, actual: dateRow, warnings: dated.warnings });
-  await expectedError("policy-date-arithmetic", "SELECT DATE '2024-06-15' + 1 FROM DUAL;", "42883");
+  assert.deepEqual(dateRow, { type: "timestamp without time zone", time: "12:34:56" });
+  checks.push({ id: "date-time", category: "fixed", sql: dated.sql, actual: dateRow, warnings: dated.warnings });
+  await scalar("date-arithmetic", "SELECT TO_CHAR(DATE '2024-06-15' + 1, 'YYYY-MM-DD') FROM DUAL;", "2024-06-16");
   await expectedError("policy-identity-type", "CREATE TABLE identity_probe (id NUMBER GENERATED ALWAYS AS IDENTITY);", "22023");
-  await expectedError("policy-unknown-column-type", "SELECT NVL(flag, '0') FROM (SELECT CAST(1 AS NUMBER) flag FROM DUAL) t;", "22P02");
-  await expectedError("manual-aggregate-rownum", "SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;", "42703");
+  await scalar("derived-column-type", "SELECT NVL(flag, '0') FROM (SELECT CAST(1 AS NUMBER) flag FROM DUAL) t;", "1");
+  await scalar("aggregate-rownum", "SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;", "2");
 
-  const sourceSha256 = createHash("sha256").update(await readFile("index.html")).digest("hex");
+  const sourceSha256 = createHash("sha256").update(await readFile(appFile)).digest("hex");
   const report = { sourceSha256, postgresVersion: version, oracleExecuted: false, disposableCluster: true, passed: checks.length, fixes: checks.filter((c) => c.category === "fixed").length, policyLimitations: checks.filter((c) => c.category === "policy-limitation").length, checks };
   if (process.env.SQL_CHANGER_PG_REPORT) await writeFile(process.env.SQL_CHANGER_PG_REPORT, JSON.stringify(report, null, 2) + "\n");
   console.log(`postgres verification: ${report.passed} checks passed on ${version} (${report.fixes} fixes, ${report.policyLimitations} explicit limitations)`);
@@ -109,7 +109,6 @@ try {
   if (!client) console.error(logs.join("\n"));
   throw error;
 } finally {
-  if (client) await client.end();
-  await pg.stop();
+  try { if (client) await client.end(); } finally { await pg.stop(); }
   await rm(databaseDir, { recursive: true, force: true });
 }

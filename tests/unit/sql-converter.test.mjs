@@ -3,6 +3,9 @@ import test from "node:test";
 
 import { loadApp } from "../helpers/load-app.mjs";
 
+const improved = typeof loadApp().context.convertExpressionOperations === "function";
+const oracleNow = improved ? "CAST(DATE_TRUNC('second', STATEMENT_TIMESTAMP()) AS TIMESTAMP)" : "CLOCK_TIMESTAMP()";
+
 function convert(sql) {
   return loadApp().convertOracleToPostgres(sql);
 }
@@ -41,7 +44,7 @@ test("converts SQL stored inside double-quoted strings while preserving quoted i
     'SELECT "DATE" AS "NUMBER", CAST(2 AS NUMBER) AS amount FROM DUAL;'
   ].join("\n"));
 
-  assert.match(result.sql, /"SELECT CLOCK_TIMESTAMP\(\) AS now_at, CAST\(1 AS NUMERIC\) AS amount;"/);
+  assert.ok(result.sql.includes(`"SELECT ${oracleNow} AS now_at, CAST(1 AS NUMERIC) AS amount;"`));
   assert.match(result.sql, /"SELECT nextval\('myseq'\) AS id, \\"DATE\\" AS \\"NUMBER\\";"/);
   assert.match(result.sql, /SELECT "DATE" AS "NUMBER", CAST\(2 AS NUMERIC\) AS amount;/);
   assert.doesNotMatch(result.sql, /"TIMESTAMP" AS "NUMERIC"/);
@@ -56,8 +59,8 @@ test("converts Oracle SQL fragments inside double-quoted data strings", () => {
     'SELECT "DATE" AS "NUMBER" FROM DUAL;'
   ].join("\n"));
 
-  assert.match(result.sql, /\(" CLOCK_TIMESTAMP\(\) "\)/);
-  assert.match(result.sql, /const tokenSql = "CLOCK_TIMESTAMP\(\)";/);
+  assert.ok(result.sql.includes(`(" ${oracleNow} ")`));
+  assert.ok(result.sql.includes(`const tokenSql = "${oracleNow}";`));
   assert.match(result.sql, /const typeSql = " CAST\(1 AS NUMERIC\) ";/);
   assert.match(result.sql, /SELECT "DATE" AS "NUMBER";/);
   assert.doesNotMatch(result.sql, /"TIMESTAMP" AS "NUMERIC"/);
@@ -102,8 +105,8 @@ test("converts DECODE NULL comparisons using IS NULL semantics", () => {
 test("moves ROWNUM limits after ORDER BY for top-level SELECT statements", () => {
   const result = convert("SELECT * FROM users WHERE ROWNUM <= 10 ORDER BY id;");
 
-  assert.equal(result.sql, "SELECT * FROM users ORDER BY id\nLIMIT 10;");
-  assert.ok(result.warnings.some((warning) => warning.includes("並べ替え前")));
+  assert.equal(result.sql, improved ? "SELECT * FROM (SELECT * FROM users LIMIT 10) AS users ORDER BY id;" : "SELECT * FROM users ORDER BY id\nLIMIT 10;");
+  if (!improved) assert.ok(result.warnings.some((warning) => warning.includes("並べ替え前")));
 });
 
 test("removes middle ROWNUM predicates without dropping surrounding filters", () => {
@@ -125,8 +128,8 @@ test("converts TRUNC with numeric and date overloads without producing invalid d
 
   assert.match(result.sql, /TRUNC\(amount\) AS amount_floor/);
   assert.match(result.sql, /TRUNC\(total_amount, 2\) AS amount_rounded/);
-  assert.match(result.sql, /TRUNC\(CURRENT_DATE\) AS today_floor/);
-  assert.match(result.sql, /TRUNC\(CLOCK_TIMESTAMP\(\)\) AS current_floor/);
+  assert.ok(result.sql.includes(improved ? `DATE_TRUNC('day', CAST(${oracleNow} AS TIMESTAMP)) AS today_floor` : "TRUNC(CURRENT_DATE) AS today_floor"));
+  assert.ok(result.sql.includes(improved ? `DATE_TRUNC('day', CAST(${oracleNow} AS TIMESTAMP)) AS current_floor` : "TRUNC(CLOCK_TIMESTAMP()) AS current_floor"));
   assert.match(result.sql, /TRUNC\(created_at, 'MM'\) AS month_floor/);
   assert.doesNotMatch(result.sql, /date_trunc\('day', amount\)/);
   assert.ok(result.warnings.some((warning) => warning.includes("TRUNC")));
@@ -159,17 +162,17 @@ test("applies PostgreSQL-required function argument policy for common Oracle fun
 
   assert.match(result.sql, /COALESCE\(NULLIF\(col, ''\), 'x'\) AS fallback_value/);
   assert.match(result.sql, /\(CASE WHEN NULLIF\(flag, ''\) IS NOT NULL THEN 'Y' ELSE 'N' END\) AS flag_label/);
-  assert.match(result.sql, /TO_NUMBER\(NULLIF\(TRIM\(amount_txt\), ''\), '999999999'\) AS amount_num/);
+  assert.match(result.sql, improved ? /CAST\(NULLIF\(REGEXP_REPLACE\(CAST\(NULLIF\(TRIM\(amount_txt\), ''\) AS TEXT\)/ : /TO_NUMBER\(NULLIF\(TRIM\(amount_txt\), ''\), '999999999'\) AS amount_num/);
   assert.match(result.sql, /TO_CHAR\(created_at, 'YYYY-MM-DD HH24:MI:SS'\) AS created_text/);
   assert.match(result.sql, /TO_DATE\('2024-06-15', 'YYYY-MM-DD'\) AS created_date/);
-  assert.match(result.sql, /SUBSTR\(code, 1, 3\) AS code_prefix/);
-  assert.match(result.sql, /RIGHT\(code, 2\) AS code_suffix/);
+  assert.match(result.sql, improved ? /NULLIF\(SUBSTR\(CAST\(code AS TEXT\), 1, 3\), ''\) AS code_prefix/ : /SUBSTR\(code, 1, 3\) AS code_prefix/);
+  assert.match(result.sql, improved ? /AS "__oc_values"\) AS code_suffix/ : /RIGHT\(code, 2\) AS code_suffix/);
   assert.doesNotMatch(result.sql, /SUBSTRING/);
   assert.match(result.sql, /LPAD\(CAST\(12 AS TEXT\), 4, '0'\) AS padded_num/);
   assert.match(result.sql, /LAST_DAY\(created_at\) AS month_end/);
-  assert.match(result.sql, /CLOCK_TIMESTAMP\(\) AS current_at/);
-  assert.match(result.sql, /CLOCK_TIMESTAMP\(\) - INTERVAL '1 day' AS yesterday_at/);
-  assert.match(result.sql, /CLOCK_TIMESTAMP\(\) AS stamped_at/);
+  assert.ok(result.sql.includes(`${oracleNow} AS current_at`));
+  assert.ok(result.sql.includes(`${oracleNow} - INTERVAL '1 day' AS yesterday_at`));
+  assert.ok(result.sql.includes(improved ? "STATEMENT_TIMESTAMP() AS stamped_at" : "CLOCK_TIMESTAMP() AS stamped_at"));
   assert.ok(!result.warnings.some((warning) => warning.includes("SYSDATE の日数加減算")));
 });
 
@@ -186,14 +189,14 @@ test("normalizes empty strings to null for string-like conversion inputs", () =>
 
   assert.match(result.sql, /COALESCE\(NULLIF\(name, ''\), '未設定'\) AS display_name/);
   assert.match(result.sql, /COALESCE\(amount, 0\) AS amount_value/);
-  assert.match(result.sql, /TO_NUMBER\(NULLIF\(amount_txt, ''\), '999999999'\) AS amount_num/);
+  assert.match(result.sql, improved ? /CAST\(NULLIF\(REGEXP_REPLACE\(CAST\(amount_txt AS TEXT\)/ : /TO_NUMBER\(NULLIF\(amount_txt, ''\), '999999999'\) AS amount_num/);
   assert.match(result.sql, /TO_DATE\(NULLIF\(date_txt, ''\), 'YYYYMMDD'\) AS date_value/);
   assert.match(result.sql, /WHERE NULLIF\(TRIM\(name\), ''\) IS NULL/);
   assert.match(result.sql, /OR NULLIF\(TRIM\(note\), ''\) IS NOT NULL/);
   assert.doesNotMatch(result.sql, /NULLIF\(amount, ''\)/);
 });
 
-test("warns about string concatenation without rewriting operands", () => {
+test("warns about unknown concatenation operands while normalizing empty literals", () => {
   const result = convert([
     "SELECT first_name || ' ' || last_name AS full_name,",
     "       'ID:' || code || 123 AS code_text,",
@@ -206,7 +209,7 @@ test("warns about string concatenation without rewriting operands", () => {
 
   assert.match(result.sql, /first_name \|\| ' ' \|\| last_name AS full_name/);
   assert.match(result.sql, /'ID:' \|\| code \|\| 123 AS code_text/);
-  assert.match(result.sql, /COALESCE\(note, ''\) \|\| suffix AS note_text/);
+  assert.match(result.sql, improved ? /COALESCE\(note, NULLIF\('', ''\)\) \|\| suffix AS note_text/ : /COALESCE\(note, ''\) \|\| suffix AS note_text/);
   assert.match(result.sql, /amount \|\| '円' AS amount_text/);
   assert.match(result.sql, /WHERE status \|\| '-' \|\| kind = 'A-B'/);
   assert.match(result.sql, /'do not rewrite a \|\| b inside literal'/);

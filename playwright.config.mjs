@@ -2,8 +2,10 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  reporter: "list",
+  reporter: process.env.SQL_CHANGER_E2E_REPORT
+    ? [["list"], ["json", { outputFile: process.env.SQL_CHANGER_E2E_REPORT }]] : "list",
   timeout: 30_000,
+  workers: 2,
   expect: {
     timeout: 5_000
   },
@@ -17,14 +19,12 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 30_000
   },
-  projects: [
-    {
-      name: "chromium",
-      use: {
-        browserName: "chromium"
-      }
-    },
-    { name: "firefox", use: { browserName: "firefox" } },
-    { name: "webkit", use: { browserName: "webkit" } }
-  ]
+  projects: ["chromium", "firefox", "webkit"].map((name) => ({
+    name,
+    use: {
+      browserName: name,
+      launchOptions: process.env[`SQL_CHANGER_${name.toUpperCase()}_EXECUTABLE`]
+        ? { executablePath: process.env[`SQL_CHANGER_${name.toUpperCase()}_EXECUTABLE`] } : {}
+    }
+  }))
 });

@@ -1,0 +1,85 @@
+{
+  "sourceFile": "index-business-ui.html",
+  "sourceSha256": "bfaac7dacc33ef48e7161c5d1dd1847fbaefa870b7e215fbb1b2b733de1d3aee",
+  "baselineSha256": "727f82c4ead06b285511c32a53669edc053086d18241207198e0fb09627ffe96",
+  "unit": {
+    "passed": 187,
+    "failed": 0,
+    "additionalTests": 50
+  },
+  "originalAndBusinessRegression": {
+    "passed": 187,
+    "failed": 0
+  },
+  "baselineAdditionalRegression": {
+    "executed": 49,
+    "passed": 7,
+    "failed": 42,
+    "excluded": 1,
+    "exclusionReason": "The old clipboard implementation never resolves the deliberately stalled promise."
+  },
+  "browser": {
+    "passed": 60,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0,
+    "engines": [
+      "Chromium",
+      "Firefox",
+      "WebKit"
+    ]
+  },
+  "database": {
+    "total": 274,
+    "equivalent": 264,
+    "policyExceptions": 4,
+    "rejectedInputs": 6,
+    "failed": 0
+  },
+  "resolvedPreviousPolicyCases": 11,
+  "remainingPolicyCases": [
+    "policy-identity",
+    "helper-add-months",
+    "helper-months-between",
+    "helper-last-day"
+  ],
+  "mutation": {
+    "detected": 11,
+    "total": 11
+  },
+  "ui": {
+    "visibleMarkupAndCssUnchanged": true,
+    "noJapaneseMessageLiteralsAdded": true,
+    "pixelIdenticalScreenshots": 8,
+    "originalHtmlUnchanged": true,
+    "cspChange": "worker-src blob:"
+  },
+  "performanceCases": [
+    {
+      "statements": 1000,
+      "inputCharacters": 34000,
+      "milliseconds": [
+        141,
+        123,
+        121
+      ],
+      "medianMilliseconds": 123
+    },
+    {
+      "statements": 10000,
+      "inputCharacters": 340000,
+      "milliseconds": [
+        1245,
+        1327,
+        1161
+      ],
+      "medianMilliseconds": 1245
+    }
+  ],
+  "environment": {
+    "node": "v22.22.2",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "testedAt": "2026-09-22T10:32:46.338Z"
+}

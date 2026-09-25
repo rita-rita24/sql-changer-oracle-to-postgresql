@@ -24,9 +24,9 @@ const mutants = [
   },
   {
     name: "break ROWNUM limit appending",
-    mutateScript: (script) => replaceRequired(script, "return `${trimmedBody}\\nLIMIT ${limit}${semicolon}`;", "return `${trimmedBody}${semicolon}`;"),
+    mutateScript: (script) => replaceRequired(script, "return `${trimmedBody}\\n${comments}LIMIT ${limit}${semicolon}`;", "return `${trimmedBody}${semicolon}`;"),
     assertion(convert) {
-      assert.equal(convert("SELECT * FROM users WHERE ROWNUM <= 10 ORDER BY id;").sql, "SELECT * FROM users ORDER BY id\nLIMIT 10;");
+      assert.equal(convert("SELECT * FROM users WHERE ROWNUM <= 10;").sql, "SELECT * FROM users\nLIMIT 10;");
     }
   },
   {
@@ -66,6 +66,51 @@ const mutants = [
     }
   }
 ];
+
+if (typeof loadApp().context.convertExpressionOperations === "function") mutants.push(
+  {
+    name: "disable numeric and date expression correction",
+    mutateScript: (script) => replaceRequired(script, "sql = convertExpressionOperations(sql);", "/* expression correction disabled */"),
+    assertion(convert) { assert.equal(convert("SELECT 1/2 FROM DUAL;").sql, "SELECT 1/CAST(2 AS NUMERIC);"); }
+  },
+  {
+    name: "re-enable cycling when NOCYCLE was requested",
+    mutateScript: (script) => replaceRequired(script, 'NOCYCLE: "NO CYCLE"', 'NOCYCLE: "CYCLE"'),
+    assertion(convert) { assert.equal(convert("ALTER SEQUENCE s NOCYCLE;").sql, "ALTER SEQUENCE s NO CYCLE;"); }
+  },
+  {
+    name: "rewrite qualified user functions as built-ins",
+    mutateScript: (script) => replaceRequired(script, "qualified.has(found) || ", ""),
+    assertion(convert) { assert.equal(convert("SELECT app . NVL(a,b) FROM t;").sql, "SELECT app . NVL(a,b) FROM t;"); }
+  },
+  {
+    name: "corrupt Unicode host-string escapes",
+    mutateScript: (script) => replaceRequired(script, "text += String.fromCodePoint(code);", 'text += "?";'),
+    assertion(convert) {
+      assert.equal(convert(String.raw`const sql = "SELECT '\u0041' FROM DUAL;";`).sql, 'const sql = "SELECT \'A\';";');
+    }
+  },
+  {
+    name: "drop identity sequence options",
+    mutateScript: (script) => replaceRequired(script, "normalizeSequenceOptions(sql.slice(open + 1, close))", '""'),
+    assertion(convert) { assert.match(convert("CREATE TABLE t (id INTEGER GENERATED ALWAYS AS IDENTITY (START WITH 40));").sql, /START WITH 40/); }
+  },
+  {
+    name: "discard the newline terminating an argument comment",
+    mutateScript: (script) => replaceRequired(script, 'return trimmed + "\\n";', 'return trimmed;'),
+    assertion(convert) {
+      const result = convert('SELECT NVL(1 -- note\n,2) FROM DUAL;');
+      assert.match(result.sql, /-- note\n,/);
+    }
+  },
+  {
+    name: "stop protecting national alternative quotes",
+    mutateScript: (script) => replaceRequired(script, '&& /[qQ]/.test(sql[index + 1] || "")', '&& false'),
+    assertion(convert) {
+      assert.equal(convert("SELECT nq'[it's NVL(x,0); DATE]' FROM DUAL;").sql, "SELECT nq'[it's NVL(x,0); DATE]';");
+    }
+  },
+);
 
 let killed = 0;
 const survived = [];

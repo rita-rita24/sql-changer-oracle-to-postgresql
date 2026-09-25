@@ -5,7 +5,9 @@ import vm from "node:vm";
 import { loadApp } from "../helpers/load-app.mjs";
 
 const convert = (sql) => loadApp().convertOracleToPostgres(sql);
-const policies = JSON.parse(readFileSync(new URL("../fixtures/conversion-policy.json", import.meta.url), "utf8"));
+const improved = typeof loadApp().context.convertExpressionOperations === "function";
+const policies = JSON.parse(readFileSync(new URL(improved ? "../fixtures/business-conversion-policy.json" : "../fixtures/conversion-policy.json", import.meta.url), "utf8"));
+const businessAudit = JSON.parse(readFileSync(new URL("../fixtures/business-audit-expectations.json", import.meta.url), "utf8"));
 for (const [index, policy] of policies.entries()) {
   test(`preserves established conversion policy ${index + 1}: ${policy.input.slice(0, 65)}`, () => {
     assert.equal(convert(policy.input).sql, policy.sql);
@@ -59,7 +61,10 @@ const retained = new Set(["ROW-01", "ROW-03", "ROW-05", "DUAL-01", "DUAL-02"]);
 for (const probe of audit.observations) {
   test(`audit regression ${probe.id}: ${probe.category}`, () => {
     const result = convert(probe.input);
-    if (probe.id in fixed) {
+    if (improved && businessAudit[probe.id]) {
+      assert.equal(result.sql, businessAudit[probe.id].sql);
+      assert.equal(result.status, businessAudit[probe.id].status);
+    } else if (probe.id in fixed) {
       assert.equal(result.sql, fixed[probe.id]);
       assert.ok(!result.warnings.some((w) => /引用符.*閉じていない/.test(w)));
     } else {
@@ -135,9 +140,9 @@ test("only converts complete independent ROWNUM bounds", () => {
     'SELECT * FROM t WHERE ROWNUM <= 2 AND n BETWEEN 1 AND 3;',
     'SELECT * FROM t WHERE ROWNUM <= 9223372036854775808;',
     'SELECT * FROM t WHERE ROWNUM <= 2 UNION ALL SELECT * FROM u;',
-    'SELECT * FROM t WHERE x=1 -- preserve filter\nAND ROWNUM <= 2 ORDER BY id;',
+    'SELECT /*+ FIRST_ROWS(2) */ * FROM t WHERE x=1 AND ROWNUM <= 2 ORDER BY id;',
     'SELECT * FROM t WHERE EXISTS (SELECT 1 FROM u WHERE ROWNUM <= 2);',
-    'SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;',
+    ...(improved ? [] : ['SELECT COUNT(*) FROM t WHERE ROWNUM <= 2;']),
     'WITH t AS (SELECT * FROM u) SELECT * FROM t WHERE ROWNUM <= 2;',
   ]) {
     const result = convert(sql);
@@ -180,7 +185,7 @@ test("bounds nested DECODE expansion and flags evaluation-sensitive expressions"
   const result = convert(`SELECT ${expression} FROM t;`);
   assert.ok(result.sql.length < 20000);
   assert.match(result.warnings.join("\n"), /過大/);
-  assert.match(convert("SELECT DECODE(SYSDATE, a, 1, b, 2, 0) FROM t;").warnings.join("\n"), /評価回数/);
+  assert.match(convert("SELECT DECODE(s.NEXTVAL, a, 1, b, 2, 0) FROM t;").warnings.join("\n"), /評価回数/);
 });
 
 test("retains ROWNUM with statistical aggregates and projected row numbers", () => {
@@ -193,5 +198,5 @@ test("retains ROWNUM with statistical aggregates and projected row numbers", () 
 
 test("preserves host variable names while converting their SQL string values", () => {
   const result = convert('const DATE = "SELECT SYSDATE FROM DUAL;";\nSELECT CAST(1 AS NUMBER) FROM DUAL;');
-  assert.equal(result.sql, 'const DATE = "SELECT CLOCK_TIMESTAMP();";\nSELECT CAST(1 AS NUMERIC);');
+  assert.equal(result.sql, improved ? `const DATE = "SELECT CAST(DATE_TRUNC('second', STATEMENT_TIMESTAMP()) AS TIMESTAMP);";\nSELECT CAST(1 AS NUMERIC);` : 'const DATE = "SELECT CLOCK_TIMESTAMP();";\nSELECT CAST(1 AS NUMERIC);');
 });

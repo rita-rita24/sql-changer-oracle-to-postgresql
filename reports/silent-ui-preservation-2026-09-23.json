@@ -1,0 +1,9 @@
+{
+  "beforeSha256": "55f0dea94391b313cc280569e4567f32b5f0778f4c539be00957db78905e546c",
+  "sourceSha256": "4f7dbfa194c86fdb0b94f2152c62deec7cc6a269b4c66ddeabe4fef221358b1d",
+  "staticHtmlCssAndFixedCopyIdentical": true,
+  "staticSha256": "508064d3c660564d128dc406d87ba8bbb8590f393663da59b549795ad80b2c78",
+  "buttonCountBefore": 4,
+  "buttonCountAfter": 4,
+  "method": "Compare entire HTML byte-for-byte after replacing script bodies with an empty script; includes CSS, elements, attributes, labels and buttons."
+}

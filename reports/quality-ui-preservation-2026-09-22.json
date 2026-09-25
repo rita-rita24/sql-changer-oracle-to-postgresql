@@ -1,0 +1,97 @@
+{
+  "baselineSha256": "bfaac7dacc33ef48e7161c5d1dd1847fbaefa870b7e215fbb1b2b733de1d3aee",
+  "sourceSha256": "acf03ab69c9261a0546a6e4dea7df422be44771381b5317bd555909919d5d872",
+  "bodyMarkupEqual": true,
+  "comparisons": [
+    {
+      "width": 1280,
+      "theme": "light",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 1280,
+      "theme": "light",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 1280,
+      "theme": "dark",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": false,
+      "changedPixels": 27,
+      "maxChannelDifference": 1,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 390,
+      "theme": "light",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "filled": false,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    },
+    {
+      "width": 390,
+      "theme": "dark",
+      "filled": true,
+      "buttonsEqual": true,
+      "pixelsEqual": true,
+      "changedPixels": 0,
+      "maxChannelDifference": 0,
+      "withinRasterTolerance": true
+    }
+  ],
+  "screenshotConditions": {
+    "reducedMotion": "reduce",
+    "caret": "hidden",
+    "pointer": [
+      0,
+      0
+    ],
+    "waitedAnimationFrames": 2,
+    "rasterTolerance": "At most 100 pixels with a maximum RGB channel difference of 1 out of 255."
+  }
+}

@@ -1,0 +1,99 @@
+{
+  "sourceFile": "index-business-ui.html",
+  "sourceSha256": "727f82c4ead06b285511c32a53669edc053086d18241207198e0fb09627ffe96",
+  "baselineSha256": "b3177ba51b6af9c87fa872aedad6530d27bc056fedbe4396261728f0abc9ce5f",
+  "markupAndCssUnchanged": true,
+  "originalHtmlUnchanged": true,
+  "japaneseMessagesUnchanged": true,
+  "screenshots": [
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "colorScheme": "light",
+      "state": "empty",
+      "identical": true,
+      "beforeSha256": "27be25d7ee8f459c29d63782143f0271b4ff5dd23157d62f5d8cc0a4729e47c6",
+      "afterSha256": "27be25d7ee8f459c29d63782143f0271b4ff5dd23157d62f5d8cc0a4729e47c6"
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "colorScheme": "light",
+      "state": "converted",
+      "identical": true,
+      "beforeSha256": "5649acfc4a4ea316a4adb3f6eb75d481ac4c0cd219563e8e102272ca53a40e2e",
+      "afterSha256": "5649acfc4a4ea316a4adb3f6eb75d481ac4c0cd219563e8e102272ca53a40e2e"
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "colorScheme": "dark",
+      "state": "empty",
+      "identical": true,
+      "beforeSha256": "64f844d14e50aca11213a7d10dd7e706e3e3c94ba9f29c272961a332b767fa9c",
+      "afterSha256": "64f844d14e50aca11213a7d10dd7e706e3e3c94ba9f29c272961a332b767fa9c"
+    },
+    {
+      "viewport": {
+        "width": 1280,
+        "height": 800
+      },
+      "colorScheme": "dark",
+      "state": "converted",
+      "identical": true,
+      "beforeSha256": "c3dd5a5f299e20080729f25cb05244d27c953e207356756f48bc362f5802af08",
+      "afterSha256": "c3dd5a5f299e20080729f25cb05244d27c953e207356756f48bc362f5802af08"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "colorScheme": "light",
+      "state": "empty",
+      "identical": true,
+      "beforeSha256": "dac643ce17ddc385a95e6e99c21e468d3c061d8eb7cc5a243cc3d4a44d9c9872",
+      "afterSha256": "dac643ce17ddc385a95e6e99c21e468d3c061d8eb7cc5a243cc3d4a44d9c9872"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "colorScheme": "light",
+      "state": "converted",
+      "identical": true,
+      "beforeSha256": "2c7ab986946f788f7d2f1f38be1c34c56db2caaedfb6074421d38151040529d3",
+      "afterSha256": "2c7ab986946f788f7d2f1f38be1c34c56db2caaedfb6074421d38151040529d3"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "colorScheme": "dark",
+      "state": "empty",
+      "identical": true,
+      "beforeSha256": "0307086cc06f7898ca513b208e37590b1f93ae71538e95f759c2e60b67439570",
+      "afterSha256": "0307086cc06f7898ca513b208e37590b1f93ae71538e95f759c2e60b67439570"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "colorScheme": "dark",
+      "state": "converted",
+      "identical": true,
+      "beforeSha256": "83e2b349c0d951163ddb871fac7bdb423e8d115caaf6eb11523c331785a45c9a",
+      "afterSha256": "83e2b349c0d951163ddb871fac7bdb423e8d115caaf6eb11523c331785a45c9a"
+    }
+  ],
+  "browserVersion": "153.0.8010.12"
+}

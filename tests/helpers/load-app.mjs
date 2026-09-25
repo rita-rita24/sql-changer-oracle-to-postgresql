@@ -1,9 +1,11 @@
+import { appFile } from "../../scripts/app-config.mjs";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 
 function createElementStub(context, tagName = "div") {
   const listeners = new Map();
   const classes = new Set();
+  const descendants = new Map();
   return {
     tagName: tagName.toUpperCase(),
     value: "",
@@ -17,6 +19,19 @@ function createElementStub(context, tagName = "div") {
     scrollLeft: 0,
     selectionStart: 0,
     selectionEnd: 0,
+    selectionDirection: "none",
+    setAttribute(name, value) { this.attributes.set(name, String(value)); },
+    removeAttribute(name) { this.attributes.delete(name); },
+    getAttribute(name) { return this.attributes.get(name) ?? null; },
+    querySelector(selector) {
+      if (!descendants.has(selector)) descendants.set(selector, createElementStub(context, "span"));
+      return descendants.get(selector);
+    },
+    setSelectionRange(start, end, direction = "none") {
+      this.selectionStart = start;
+      this.selectionEnd = end;
+      this.selectionDirection = direction;
+    },
     classList: {
       add(...names) {
         names.forEach((name) => classes.add(name));
@@ -59,13 +74,18 @@ function createElementStub(context, tagName = "div") {
 }
 
 export function loadApp(options = {}) {
-  const html = readFileSync("index.html", "utf8");
+  const filename = options.file || appFile;
+  const html = readFileSync(filename, "utf8");
   const script = html.match(/<script>([\s\S]*)<\/script>\s*<\/body>/)?.[1];
   if (!script) {
     throw new Error("Application script not found");
   }
 
   const elements = new Map();
+  const timers = new Map();
+  const windowListeners = new Map();
+  let time = 0;
+  let timerId = 0;
   const context = {
     console,
     navigator: {
@@ -76,9 +96,19 @@ export function loadApp(options = {}) {
       }
     },
     window: {
-      clearTimeout() {},
-      setTimeout() {
-        return 1;
+      addEventListener(type, handler) {
+        const handlers = windowListeners.get(type) || [];
+        handlers.push(handler);
+        windowListeners.set(type, handlers);
+      },
+      dispatchEvent(event) {
+        for (const handler of windowListeners.get(event.type) || []) handler(event);
+      },
+      clearTimeout(id) { timers.delete(id); },
+      setTimeout(callback, delay = 0) {
+        const id = ++timerId;
+        timers.set(id, { callback, at: time + delay });
+        return id;
       },
       getSelection() {
         return {
@@ -112,12 +142,22 @@ export function loadApp(options = {}) {
 
   vm.createContext(context);
   vm.runInContext(options.mutateScript ? options.mutateScript(script) : script, context, {
-    filename: "index.html<script>"
+    filename: `${filename}<script>`
   });
 
   return {
     context,
     elements,
+    advanceTime(milliseconds) {
+      const end = time + milliseconds;
+      let pending;
+      while ((pending = [...timers].filter(([, value]) => value.at <= end).sort((a, b) => a[1].at - b[1].at)[0])) {
+        time = pending[1].at;
+        timers.delete(pending[0]);
+        pending[1].callback();
+      }
+      time = end;
+    },
     convertOracleToPostgres: context.convertOracleToPostgres,
     highlightSql: context.highlightSql
   };

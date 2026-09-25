@@ -1,0 +1,10 @@
+{
+  "beforeSha256": "4f7dbfa194c86fdb0b94f2152c62deec7cc6a269b4c66ddeabe4fef221358b1d",
+  "afterSha256": "f6cc6a051c86288c528417957382a146d9131472e169ac5e5a5ca88c2cda550c",
+  "staticHtmlCssAndThemeIdentical": true,
+  "staticSha256": "b968e4c10a04bd8949334bb802a873c8a62dd97d21d1211eff5e9b8d8bb458ed",
+  "buttonsBefore": 4,
+  "buttonsAfter": 4,
+  "existingCases": 3027,
+  "existingConversionDifferences": []
+}

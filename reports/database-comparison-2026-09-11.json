@@ -1,0 +1,5122 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-09-10T17:31:39.653Z",
+  "sourceSha256": "5c1371f6d45c1479fa692b772a98c75013573e9bd3d57350b89683758edb9dd5",
+  "corpusSha256": "cba3fa0381818d55511f13526be1b6e0e233792dc833ace09495ef4b398f0540",
+  "oracleExecuted": true,
+  "postgresExecuted": true,
+  "images": {
+    "oracle": {
+      "tag": "gvenzl/oracle-free:23.26.3-slim@sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd",
+      "imageId": "sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd",
+      "digests": [
+        "gvenzl/oracle-free@sha256:6d61d267a3b978c24c5ac1790e62e927416a0aec446bd86e4b3a1527562757bd"
+      ]
+    },
+    "postgres": {
+      "tag": "postgres:15.17@sha256:32016c79bea24c14917660106bc23a03341d94b9983aeb41f4130b4f3fbd6dd0",
+      "imageId": "sha256:32016c79bea24c14917660106bc23a03341d94b9983aeb41f4130b4f3fbd6dd0",
+      "digests": [
+        "postgres@sha256:32016c79bea24c14917660106bc23a03341d94b9983aeb41f4130b4f3fbd6dd0"
+      ]
+    }
+  },
+  "cases": [
+    {
+      "id": "literal-protection",
+      "source": "SELECT 'NVL NUMBER SYSDATE ; a.id=1' AS v FROM DUAL",
+      "converted": "SELECT 'NVL NUMBER SYSDATE ; a.id=1' AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "NVL NUMBER SYSDATE ; a.id=1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "NVL NUMBER SYSDATE ; a.id=1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "backslash",
+      "source": "SELECT '\\' AS v FROM DUAL",
+      "converted": "SELECT '\\' AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "\\"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "\\"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "quoted-identifier",
+      "source": "SELECT 1 AS \"NUMBER\", 2 AS v FROM DUAL",
+      "converted": "SELECT 1 AS \"NUMBER\", 2 AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nested-nvl",
+      "source": "SELECT NVL(NVL(CAST(NULL AS VARCHAR2(10)), ''), 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF(COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), NULL), ''), 'fallback') AS v",
+      "warnings": [
+        "NVL の引数 COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), NULL) の型はスキーマ未検証です。従来の空文字・型推定を適用しているため、数値/日付列と文字列列の違いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nested-decode",
+      "source": "SELECT DECODE(1, 1, DECODE(2, 2, 'yes', 'no'), 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 1 = 1 THEN (CASE WHEN 2 = 2 THEN 'yes' ELSE 'no' END) ELSE 'other' END) AS v",
+      "warnings": [
+        "DECODE の引数 (CASE WHEN 2 = 2 THEN 'yes' ELSE 'no' END) の型はスキーマ未検証です。従来の空文字・型推定を適用しているため、数値/日付列と文字列列の違いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "comment-function",
+      "source": "SELECT NVL/* , ) ; */(CAST(NULL AS VARCHAR2(10)), 'fallback') AS v FROM DUAL",
+      "converted": "SELECT /* , ) ; */COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-coercion",
+      "source": "SELECT NVL(CAST(NULL AS VARCHAR2(10)), 0) AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), CAST(0 AS TEXT)) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-empty-result",
+      "source": "SELECT NVL(CAST(NULL AS VARCHAR2(10)), '') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), NULL) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-null",
+      "source": "SELECT DECODE(CAST(NULL AS NUMBER), CAST(NULL AS NUMBER), 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN CAST(NULL AS NUMERIC) IS NOT DISTINCT FROM CAST(NULL AS NUMERIC) THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-empty-result",
+      "source": "SELECT DECODE(1, 1, '', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 1 = 1 THEN NULL ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-empty-result",
+      "source": "SELECT NVL2(1, '', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 1 IS NOT NULL THEN NULL ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-numeric-text-cast",
+      "source": "SELECT NVL(CAST(NULL AS NUMBER), CAST('12' AS VARCHAR2(10))) AS v FROM DUAL",
+      "converted": "SELECT COALESCE(CAST(NULL AS NUMERIC), CAST(NULLIF(CAST('12' AS VARCHAR(10)), '') AS NUMERIC)) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-result-text",
+      "source": "SELECT NVL2(1, CAST('yes' AS VARCHAR2(10)), 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 1 IS NOT NULL THEN CAST('yes' AS VARCHAR(10)) ELSE CAST(0 AS TEXT) END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-result-number",
+      "source": "SELECT NVL2(NULL, 12, CAST('10' AS VARCHAR2(10))) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULL IS NOT NULL THEN 12 ELSE CAST(NULLIF(CAST('10' AS VARCHAR(10)), '') AS NUMERIC) END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "10"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "10"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-null-result",
+      "source": "SELECT NVL2(1, NULL, 12) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 1 IS NOT NULL THEN NULL ELSE 12 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-result-type",
+      "source": "SELECT DECODE(2, 1, 'yes', 2, 12, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 2 = 1 THEN 'yes' WHEN 2 = 2 THEN CAST(12 AS TEXT) ELSE CAST(0 AS TEXT) END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-null-first-result",
+      "source": "SELECT DECODE(2, 1, NULL, 2, 12, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN 2 = 1 THEN NULL WHEN 2 = 2 THEN CAST(12 AS TEXT) ELSE CAST(0 AS TEXT) END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-search-type",
+      "source": "SELECT DECODE(CAST('1' AS VARCHAR2(10)), 1, 'yes', 'no') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN CAST(NULLIF(CAST('1' AS VARCHAR(10)), '') AS NUMERIC) = 1 THEN 'yes' ELSE 'no' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-numeric-search-text",
+      "source": "SELECT DECODE(1, CAST('1' AS VARCHAR2(10)), 'yes', 'no') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN CAST(1 AS TEXT) = CAST('1' AS VARCHAR(10)) THEN 'yes' ELSE 'no' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "yes"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "lpad-number",
+      "source": "SELECT LPAD(12, 4, 0) AS v FROM DUAL",
+      "converted": "SELECT LPAD(CAST(12 AS TEXT), 4, '0') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "0012"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "0012"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "lpad-default",
+      "source": "SELECT LPAD('x', 3) AS v FROM DUAL",
+      "converted": "SELECT LPAD('x', 3) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "  x"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "  x"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "lpad-empty",
+      "source": "SELECT LPAD('', 3, 'x') AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "lpad-zero",
+      "source": "SELECT LPAD('x', 0, 'y') AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "lpad-negative",
+      "source": "SELECT LPAD('x', -1, 'y') AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-numeric",
+      "source": "SELECT SUBSTR(12345, 2, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(12345 AS TEXT), 2, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "23"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "23"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-numeric-format",
+      "source": "SELECT TO_NUMBER(123, '999') AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER(CAST(123 AS TEXT), '999') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "123"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "123"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "trim-null",
+      "source": "SELECT CASE WHEN TRIM('   ') IS NULL THEN 1 ELSE 0 END AS v FROM DUAL",
+      "converted": "SELECT CASE WHEN NULLIF(TRIM('   '), '') IS NULL THEN 1 ELSE 0 END AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "date-format",
+      "source": "SELECT TO_CHAR(TO_DATE('20240615', 'YYYYMMDD'), 'YYYY-MM-DD') AS v FROM DUAL",
+      "converted": "SELECT TO_CHAR(TO_DATE('20240615', 'YYYYMMDD'), 'YYYY-MM-DD') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "2024-06-15"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "2024-06-15"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "date-literal",
+      "source": "SELECT TO_CHAR(DATE '2024-06-15', 'YYYY-MM-DD') AS v FROM DUAL",
+      "converted": "SELECT TO_CHAR(TIMESTAMP '2024-06-15', 'YYYY-MM-DD') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "2024-06-15"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "2024-06-15"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "number-format",
+      "source": "SELECT TO_CHAR(123.45, 'FM999.00') AS v FROM DUAL",
+      "converted": "SELECT TO_CHAR(123.45, 'FM999.00') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "123.45"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "123.45"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "trunc-number",
+      "source": "SELECT TRUNC(12.345, 2) AS v FROM DUAL",
+      "converted": "SELECT TRUNC(12.345, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "rownum-min",
+      "source": "SELECT id FROM data_rows WHERE ROWNUM <= 10 AND ROWNUM <= 2",
+      "converted": "SELECT id FROM data_rows\nLIMIT 2",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ],
+          [
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ],
+          [
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "rownum-zero",
+      "source": "SELECT id FROM data_rows WHERE ROWNUM <= 0",
+      "converted": "SELECT id FROM data_rows\nLIMIT 0",
+      "warnings": [],
+      "oracle": {
+        "rows": []
+      },
+      "postgres": {
+        "rows": []
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "minus",
+      "source": "SELECT id FROM data_rows MINUS SELECT id FROM data_rows WHERE id=1 ORDER BY id",
+      "converted": "SELECT id FROM data_rows EXCEPT SELECT id FROM data_rows WHERE id=1 ORDER BY id",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ],
+          [
+            {
+              "type": "number",
+              "value": "3"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ],
+          [
+            {
+              "type": "number",
+              "value": "3"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "update-literal",
+      "source": "UPDATE data_rows a SET a.note='a.id=1' WHERE a.id=1",
+      "converted": "UPDATE data_rows a SET note='a.id=1' WHERE a.id=1",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "a.id=1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "a.id=1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "update-case",
+      "source": "UPDATE data_rows a SET a.n=CASE WHEN a.id=1 THEN 12 ELSE 13 END WHERE a.id<=2",
+      "converted": "UPDATE data_rows a SET n=CASE WHEN a.id=1 THEN 12 ELSE 13 END WHERE a.id<=2",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "12"
+            }
+          ],
+          [
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "number",
+              "value": "13"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "12"
+            }
+          ],
+          [
+            {
+              "type": "number",
+              "value": "2"
+            },
+            {
+              "type": "number",
+              "value": "13"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "merge-update",
+      "source": "MERGE INTO data_rows t USING source_rows s ON (t.id=s.id) WHEN MATCHED THEN UPDATE SET t.note='INSERT (t.id)' WHERE s.n=2",
+      "converted": "MERGE INTO data_rows t USING source_rows s ON (t.id=s.id) WHEN MATCHED AND (s.n=2) THEN UPDATE SET note='INSERT (t.id)'",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "INSERT (t.id)"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "INSERT (t.id)"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "merge-values",
+      "source": "MERGE INTO data_rows t USING (SELECT 4 AS id, 'new' AS note FROM DUAL) s ON (t.id=s.id) WHEN NOT MATCHED THEN INSERT (id,note) VALUES (s.id,s.note)",
+      "converted": "MERGE INTO data_rows t USING (VALUES\n  (4, 'new')\n) AS s(id, note) ON (t.id=s.id) WHEN NOT MATCHED THEN INSERT (id, note) VALUES (s.id,s.note)",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "4"
+            },
+            {
+              "type": "string",
+              "value": "new"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "4"
+            },
+            {
+              "type": "string",
+              "value": "new"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "ddl-types",
+      "source": "CREATE TABLE type_probe (id NUMBER(12,0), amount NUMBER(10,2), label VARCHAR2(20), d DATE)",
+      "converted": "CREATE TABLE type_probe (id NUMERIC(12,0), amount NUMERIC(10,2), label VARCHAR(20), d TIMESTAMP)",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "12.34"
+            },
+            {
+              "type": "string",
+              "value": "日本語"
+            },
+            {
+              "type": "string",
+              "value": "2024-06-15"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            },
+            {
+              "type": "number",
+              "value": "12.34"
+            },
+            {
+              "type": "string",
+              "value": "日本語"
+            },
+            {
+              "type": "string",
+              "value": "2024-06-15"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "ddl-quoted",
+      "source": "CREATE TABLE \"DATE\" (\"NUMBER\" NUMBER)",
+      "converted": "CREATE TABLE \"DATE\" (\"NUMBER\" NUMERIC)",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "123"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "123"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "ddl-float",
+      "source": "CREATE TABLE float_probe (v FLOAT(126))",
+      "converted": "CREATE TABLE float_probe (v DOUBLE PRECISION)",
+      "warnings": [
+        "FLOATの精度指定はDOUBLE PRECISIONへの変換に伴い除去します。精度・範囲を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.5"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.5"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "sequence",
+      "source": "CREATE SEQUENCE seq_probe START WITH 1 INCREMENT BY 1 NOCACHE",
+      "converted": "CREATE SEQUENCE seq_probe START WITH 1 INCREMENT BY 1 ",
+      "warnings": [
+        "START WITH はOracle階層問い合わせ構文のため、WITH RECURSIVEへ手動変換してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "quoted-sequence",
+      "source": "CREATE SEQUENCE \"MYSEQ\" START WITH 1 INCREMENT BY 1",
+      "converted": "CREATE SEQUENCE \"MYSEQ\" START WITH 1 INCREMENT BY 1",
+      "warnings": [
+        "START WITH はOracle階層問い合わせ構文のため、WITH RECURSIVEへ手動変換してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-to-char-decimal",
+      "source": "SELECT TO_CHAR(12.34) AS v FROM DUAL",
+      "converted": "SELECT TO_CHAR(12.34, 'FM999999999') AS v",
+      "warnings": [
+        "TO_CHAR は従来のFM999999999書式を補完します。小数部・9桁を超える値・丸めを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "従来のFM999999999補完",
+        "oracle": [
+          [
+            {
+              "type": "string",
+              "value": "12.34"
+            }
+          ]
+        ],
+        "postgres": [
+          [
+            {
+              "type": "string",
+              "value": "12"
+            }
+          ]
+        ]
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-to-date-time",
+      "source": "SELECT TO_CHAR(TO_DATE('2024-06-15 12:34:56','YYYY-MM-DD HH24:MI:SS'),'HH24:MI:SS') AS v FROM DUAL",
+      "converted": "SELECT TO_CHAR(TO_DATE('2024-06-15 12:34:56', 'YYYY-MM-DD HH24:MI:SS'), 'HH24:MI:SS') AS v",
+      "warnings": [
+        "TO_DATE は従来方針で維持します。PostgreSQL標準のto_dateは日付のみを返すため、時刻を保持する必要がある場合は互換関数等を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "12:34:56"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "00:00:00"
+            }
+          ]
+        ]
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "TO_DATE維持に伴う時刻消失",
+        "oracle": [
+          [
+            {
+              "type": "string",
+              "value": "12:34:56"
+            }
+          ]
+        ],
+        "postgres": [
+          [
+            {
+              "type": "string",
+              "value": "00:00:00"
+            }
+          ]
+        ]
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-rr-century",
+      "source": "SELECT TO_CHAR(TO_DATE('50-01-01','RR-MM-DD'),'YYYY-MM-DD') AS v FROM DUAL",
+      "converted": "SELECT TO_CHAR(TO_DATE('50-01-01', 'YY-MM-DD'), 'YYYY-MM-DD') AS v",
+      "warnings": [
+        "RR/RRRR は従来方針でYY/YYYYへ変換します。2桁年の世紀の解釈が異なるため確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "1950-01-01"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "2050-01-01"
+            }
+          ]
+        ]
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "RR→YYの世紀差（現在年2000–2049で検証）",
+        "oracle": [
+          [
+            {
+              "type": "string",
+              "value": "1950-01-01"
+            }
+          ]
+        ],
+        "postgres": [
+          [
+            {
+              "type": "string",
+              "value": "2050-01-01"
+            }
+          ]
+        ]
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-date-arithmetic",
+      "source": "SELECT DATE '2024-06-15' + 1 AS v FROM DUAL",
+      "converted": "SELECT TIMESTAMP '2024-06-15' + 1 AS v",
+      "warnings": [
+        "DATE/TIMESTAMPの日数加減算・日付差は型置換だけでは互換になりません。intervalと戻り値の型を手動確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "datetime",
+              "value": "2024-06-16T00:00:00.000Z"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42883",
+        "message": "operator does not exist: timestamp without time zone + integer"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "DATE→TIMESTAMP方針で日数加算は要対応",
+        "postgresError": "42883"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-null-concat",
+      "source": "SELECT 'A' || CAST(NULL AS VARCHAR2(10)) AS v FROM DUAL",
+      "converted": "SELECT 'A' || CAST(NULL AS VARCHAR(10)) AS v",
+      "warnings": [
+        "NULLを含む文字列連結はPostgreSQLではNULLになるため、COALESCE要否を手動確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "A"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "連結式保持のNULL差",
+        "oracle": [
+          [
+            {
+              "type": "string",
+              "value": "A"
+            }
+          ]
+        ],
+        "postgres": [
+          [
+            null
+          ]
+        ]
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-identity",
+      "source": "CREATE TABLE identity_probe (id NUMBER GENERATED ALWAYS AS IDENTITY)",
+      "converted": "CREATE TABLE identity_probe (id NUMERIC GENERATED ALWAYS AS IDENTITY)",
+      "warnings": [
+        "IDENTITY はPostgreSQLで整数型が必要です。従来のNUMBER→NUMERIC変換、ON NULL、および除去される採番オプションを確認してください。"
+      ],
+      "oracle": {
+        "affected": 0
+      },
+      "postgres": {
+        "error": "22023",
+        "message": "identity column type must be smallint, integer, or bigint"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "NUMBER→NUMERIC方針ではIDENTITY非対応",
+        "postgresError": "22023"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-unknown-type",
+      "source": "SELECT NVL(flag, '0') FROM (SELECT CAST(1 AS NUMBER) flag FROM DUAL) t",
+      "converted": "SELECT COALESCE(NULLIF(flag, ''), '0') FROM (SELECT CAST(1 AS NUMERIC) flag) t",
+      "warnings": [
+        "NVL の引数 flag の型はスキーマ未検証です。従来の空文字・型推定を適用しているため、数値/日付列と文字列列の違いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "22P02",
+        "message": "invalid input syntax for type numeric: \"\""
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "既存の列名による型推定",
+        "oracle": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ],
+        "postgresError": "22P02"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-substr-column-forward",
+      "source": "SELECT SUBSTR(note, 10) FROM data_rows WHERE id=2",
+      "converted": "SELECT SUBSTR(note, 10) FROM data_rows WHERE id=2",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": ""
+            }
+          ]
+        ]
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "列のSUBSTR維持による範囲外NULLの差",
+        "oracle": [
+          [
+            null
+          ]
+        ],
+        "postgres": [
+          [
+            {
+              "type": "string",
+              "value": ""
+            }
+          ]
+        ]
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "policy-substr-column-backward",
+      "source": "SELECT SUBSTR(note, -10) FROM data_rows WHERE id=2",
+      "converted": "SELECT RIGHT(note, 10) FROM data_rows WHERE id=2",
+      "warnings": [
+        "SUBSTR は従来のRIGHT変換を適用します。負数開始位置が文字列長を超える場合のNULL扱いを確認してください。",
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "two"
+            }
+          ]
+        ]
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "既存のRIGHT変換による範囲外NULLの差",
+        "oracle": [
+          [
+            null
+          ]
+        ],
+        "postgres": [
+          [
+            {
+              "type": "string",
+              "value": "two"
+            }
+          ]
+        ]
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "manual-aggregate-rownum",
+      "source": "SELECT COUNT(*) FROM data_rows WHERE ROWNUM<=2",
+      "converted": "SELECT COUNT(*) FROM data_rows WHERE ROWNUM<=2",
+      "warnings": [
+        "ROWNUM が残っています。集計・サブクエリ・OR条件等の範囲を保つため、自動LIMIT変換を見送りました。",
+        "ROWNUM の複雑な条件は手動確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42703",
+        "message": "column \"rownum\" does not exist"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "集計のROWNUMは手動変換",
+        "oracle": [
+          [
+            {
+              "type": "number",
+              "value": "2"
+            }
+          ]
+        ],
+        "postgresError": "42703"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "helper-add-months",
+      "source": "SELECT ADD_MONTHS(DATE '2024-01-31',1) AS v FROM DUAL",
+      "converted": "SELECT ADD_MONTHS(TIMESTAMP '2024-01-31', 1) AS v",
+      "warnings": [
+        "ADD_MONTHS は月末計算でOracleと差が出るため、PostgreSQL側の add_months 関数定義を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "datetime",
+              "value": "2024-02-29T00:00:00.000Z"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42883",
+        "message": "function add_months(timestamp without time zone, integer) does not exist"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "互換関数の導入が必要",
+        "postgresError": "42883"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "helper-months-between",
+      "source": "SELECT MONTHS_BETWEEN(DATE '2024-02-29',DATE '2024-01-31') AS v FROM DUAL",
+      "converted": "SELECT MONTHS_BETWEEN(TIMESTAMP '2024-02-29',TIMESTAMP '2024-01-31') AS v",
+      "warnings": [
+        "MONTHS_BETWEEN はOracleの月末/小数月セマンティクスと差が出やすいため、自動近似せず手動確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42883",
+        "message": "function months_between(timestamp without time zone, timestamp without time zone) does not exist"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "互換関数の導入が必要",
+        "oracle": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ],
+        "postgresError": "42883"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "helper-last-day",
+      "source": "SELECT LAST_DAY(DATE '2024-02-01') AS v FROM DUAL",
+      "converted": "SELECT LAST_DAY(TIMESTAMP '2024-02-01') AS v",
+      "warnings": [
+        "LAST_DAY はPostgreSQL側の last_day 関数定義を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "datetime",
+              "value": "2024-02-29T00:00:00.000Z"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42883",
+        "message": "function last_day(timestamp without time zone) does not exist"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "互換関数の導入が必要",
+        "postgresError": "42883"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "helper-instr",
+      "source": "SELECT INSTR('abcabc','b',1,2) AS v FROM DUAL",
+      "converted": "SELECT INSTR('abcabc', 'b', 1, 2) AS v",
+      "warnings": [
+        "INSTR はPostgreSQL側の instr 関数定義を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "5"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42883",
+        "message": "function instr(unknown, unknown, integer, integer) does not exist"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "互換関数の導入が必要",
+        "oracle": [
+          [
+            {
+              "type": "number",
+              "value": "5"
+            }
+          ]
+        ],
+        "postgresError": "42883"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "helper-trunc-date",
+      "source": "SELECT TRUNC(DATE '2024-06-15','MM') AS v FROM DUAL",
+      "converted": "SELECT TRUNC(TIMESTAMP '2024-06-15', 'MM') AS v",
+      "warnings": [
+        "TRUNC の日付引数はPostgreSQL側の trunc(date, format) 関数定義を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "datetime",
+              "value": "2024-06-01T00:00:00.000Z"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "error": "42883",
+        "message": "function trunc(timestamp without time zone, unknown) does not exist"
+      },
+      "equivalent": false,
+      "disposition": "policy-exception",
+      "exception": {
+        "reason": "互換関数の導入が必要",
+        "postgresError": "42883"
+      },
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-NULL",
+      "source": "SELECT NVL(NULL, 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULL, 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-NULL",
+      "source": "SELECT NVL2(NULL, 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULL IS NOT NULL THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-NULL",
+      "source": "SELECT DECODE(NULL, NULL, 'missing', 'abc', 'match', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULL IS NULL THEN 'missing' WHEN NULL = 'abc' THEN 'match' ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "missing"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "missing"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-''",
+      "source": "SELECT NVL('', 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF('', ''), 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-''",
+      "source": "SELECT NVL2('', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('', '') IS NOT NULL THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-''",
+      "source": "SELECT DECODE('', NULL, 'missing', 'abc', 'match', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('', '') IS NULL THEN 'missing' WHEN NULLIF('', '') = 'abc' THEN 'match' ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "missing"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "missing"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-'abc'",
+      "source": "SELECT NVL('abc', 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF('abc', ''), 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "abc"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "abc"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-'abc'",
+      "source": "SELECT NVL2('abc', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('abc', '') IS NOT NULL THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-'abc'",
+      "source": "SELECT DECODE('abc', NULL, 'missing', 'abc', 'match', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('abc', '') IS NULL THEN 'missing' WHEN NULLIF('abc', '') = 'abc' THEN 'match' ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "match"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "match"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-'日本語'",
+      "source": "SELECT NVL('日本語', 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF('日本語', ''), 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-'日本語'",
+      "source": "SELECT NVL2('日本語', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('日本語', '') IS NOT NULL THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-'日本語'",
+      "source": "SELECT DECODE('日本語', NULL, 'missing', 'abc', 'match', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('日本語', '') IS NULL THEN 'missing' WHEN NULLIF('日本語', '') = 'abc' THEN 'match' ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "other"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "other"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-'a''b'",
+      "source": "SELECT NVL('a''b', 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF('a''b', ''), 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "a'b"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "a'b"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-'a''b'",
+      "source": "SELECT NVL2('a''b', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('a''b', '') IS NOT NULL THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "1"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-'a''b'",
+      "source": "SELECT DECODE('a''b', NULL, 'missing', 'abc', 'match', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF('a''b', '') IS NULL THEN 'missing' WHEN NULLIF('a''b', '') = 'abc' THEN 'match' ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "other"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "other"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl-CAST(NULL AS VARCHAR2(10))",
+      "source": "SELECT NVL(CAST(NULL AS VARCHAR2(10)), 'fallback') AS v FROM DUAL",
+      "converted": "SELECT COALESCE(NULLIF(CAST(NULL AS VARCHAR(10)), ''), 'fallback') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "fallback"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "nvl2-CAST(NULL AS VARCHAR2(10))",
+      "source": "SELECT NVL2(CAST(NULL AS VARCHAR2(10)), 1, 0) AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF(CAST(NULL AS VARCHAR(10)), '') IS NOT NULL THEN 1 ELSE 0 END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "decode-CAST(NULL AS VARCHAR2(10))",
+      "source": "SELECT DECODE(CAST(NULL AS VARCHAR2(10)), NULL, 'missing', 'abc', 'match', 'other') AS v FROM DUAL",
+      "converted": "SELECT (CASE WHEN NULLIF(CAST(NULL AS VARCHAR(10)), '') IS NULL THEN 'missing' WHEN NULLIF(CAST(NULL AS VARCHAR(10)), '') = 'abc' THEN 'match' ELSE 'other' END) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "missing"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "missing"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-0",
+      "source": "SELECT TO_NUMBER(0) AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER(CAST(0 AS TEXT), '9') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "0"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number--123",
+      "source": "SELECT TO_NUMBER(-123) AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER(CAST(-123 AS TEXT), '999') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "-123"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "-123"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-12.34",
+      "source": "SELECT TO_NUMBER(12.34) AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER(CAST(12.34 AS TEXT), '99.99') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-'12.34'",
+      "source": "SELECT TO_NUMBER('12.34') AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER('12.34', '99.99') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12.34"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-NULL",
+      "source": "SELECT TO_NUMBER(NULL) AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER(NULLIF(NULL, ''), '999999999') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-''",
+      "source": "SELECT TO_NUMBER('') AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER(NULLIF('', ''), '999999999') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "to-number-'12345678901234567890.12'",
+      "source": "SELECT TO_NUMBER('12345678901234567890.12') AS v FROM DUAL",
+      "converted": "SELECT TO_NUMBER('12345678901234567890.12', '99999999999999999999.99') AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12345678901234567890.12"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "number",
+              "value": "12345678901234567890.12"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--9-undefined",
+      "source": "SELECT SUBSTR('abc', -9) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--9--1",
+      "source": "SELECT SUBSTR('abc', -9, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--9-0",
+      "source": "SELECT SUBSTR('abc', -9, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--9-2",
+      "source": "SELECT SUBSTR('abc', -9, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--2-undefined",
+      "source": "SELECT SUBSTR('abc', -2) AS v FROM DUAL",
+      "converted": "SELECT RIGHT('abc', 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "bc"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "bc"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--2--1",
+      "source": "SELECT SUBSTR('abc', -2, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--2-0",
+      "source": "SELECT SUBSTR('abc', -2, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'--2-2",
+      "source": "SELECT SUBSTR('abc', -2, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(RIGHT('abc', 2), 1, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "bc"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "bc"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-0-undefined",
+      "source": "SELECT SUBSTR('abc', 0) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('abc', 1) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "abc"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "abc"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-0--1",
+      "source": "SELECT SUBSTR('abc', 0, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-0-0",
+      "source": "SELECT SUBSTR('abc', 0, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-0-2",
+      "source": "SELECT SUBSTR('abc', 0, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('abc', 1, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "ab"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "ab"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-1-undefined",
+      "source": "SELECT SUBSTR('abc', 1) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('abc', 1) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "abc"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "abc"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-1--1",
+      "source": "SELECT SUBSTR('abc', 1, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-1-0",
+      "source": "SELECT SUBSTR('abc', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-1-2",
+      "source": "SELECT SUBSTR('abc', 1, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('abc', 1, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "ab"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "ab"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-3-undefined",
+      "source": "SELECT SUBSTR('abc', 3) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('abc', 3) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "c"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "c"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-3--1",
+      "source": "SELECT SUBSTR('abc', 3, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-3-0",
+      "source": "SELECT SUBSTR('abc', 3, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-3-2",
+      "source": "SELECT SUBSTR('abc', 3, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('abc', 3, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "c"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "c"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-4-undefined",
+      "source": "SELECT SUBSTR('abc', 4) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-4--1",
+      "source": "SELECT SUBSTR('abc', 4, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-4-0",
+      "source": "SELECT SUBSTR('abc', 4, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'abc'-4-2",
+      "source": "SELECT SUBSTR('abc', 4, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--9-undefined",
+      "source": "SELECT SUBSTR('日本語', -9) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--9--1",
+      "source": "SELECT SUBSTR('日本語', -9, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--9-0",
+      "source": "SELECT SUBSTR('日本語', -9, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--9-2",
+      "source": "SELECT SUBSTR('日本語', -9, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--2-undefined",
+      "source": "SELECT SUBSTR('日本語', -2) AS v FROM DUAL",
+      "converted": "SELECT RIGHT('日本語', 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "本語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "本語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--2--1",
+      "source": "SELECT SUBSTR('日本語', -2, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--2-0",
+      "source": "SELECT SUBSTR('日本語', -2, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'--2-2",
+      "source": "SELECT SUBSTR('日本語', -2, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(RIGHT('日本語', 2), 1, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "本語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "本語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-0-undefined",
+      "source": "SELECT SUBSTR('日本語', 0) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('日本語', 1) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-0--1",
+      "source": "SELECT SUBSTR('日本語', 0, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-0-0",
+      "source": "SELECT SUBSTR('日本語', 0, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-0-2",
+      "source": "SELECT SUBSTR('日本語', 0, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('日本語', 1, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-1-undefined",
+      "source": "SELECT SUBSTR('日本語', 1) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('日本語', 1) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-1--1",
+      "source": "SELECT SUBSTR('日本語', 1, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-1-0",
+      "source": "SELECT SUBSTR('日本語', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-1-2",
+      "source": "SELECT SUBSTR('日本語', 1, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('日本語', 1, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "日本"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-3-undefined",
+      "source": "SELECT SUBSTR('日本語', 3) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('日本語', 3) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-3--1",
+      "source": "SELECT SUBSTR('日本語', 3, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-3-0",
+      "source": "SELECT SUBSTR('日本語', 3, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-3-2",
+      "source": "SELECT SUBSTR('日本語', 3, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR('日本語', 3, 2) AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "語"
+            }
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            {
+              "type": "string",
+              "value": "語"
+            }
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-4-undefined",
+      "source": "SELECT SUBSTR('日本語', 4) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-4--1",
+      "source": "SELECT SUBSTR('日本語', 4, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-4-0",
+      "source": "SELECT SUBSTR('日本語', 4, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-'日本語'-4-2",
+      "source": "SELECT SUBSTR('日本語', 4, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--9-undefined",
+      "source": "SELECT SUBSTR('', -9) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--9--1",
+      "source": "SELECT SUBSTR('', -9, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--9-0",
+      "source": "SELECT SUBSTR('', -9, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--9-2",
+      "source": "SELECT SUBSTR('', -9, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--2-undefined",
+      "source": "SELECT SUBSTR('', -2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--2--1",
+      "source": "SELECT SUBSTR('', -2, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--2-0",
+      "source": "SELECT SUBSTR('', -2, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''--2-2",
+      "source": "SELECT SUBSTR('', -2, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-0-undefined",
+      "source": "SELECT SUBSTR('', 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-0--1",
+      "source": "SELECT SUBSTR('', 0, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-0-0",
+      "source": "SELECT SUBSTR('', 0, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-0-2",
+      "source": "SELECT SUBSTR('', 0, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-1-undefined",
+      "source": "SELECT SUBSTR('', 1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-1--1",
+      "source": "SELECT SUBSTR('', 1, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-1-0",
+      "source": "SELECT SUBSTR('', 1, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-1-2",
+      "source": "SELECT SUBSTR('', 1, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-3-undefined",
+      "source": "SELECT SUBSTR('', 3) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-3--1",
+      "source": "SELECT SUBSTR('', 3, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-3-0",
+      "source": "SELECT SUBSTR('', 3, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-3-2",
+      "source": "SELECT SUBSTR('', 3, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-4-undefined",
+      "source": "SELECT SUBSTR('', 4) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-4--1",
+      "source": "SELECT SUBSTR('', 4, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-4-0",
+      "source": "SELECT SUBSTR('', 4, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-''-4-2",
+      "source": "SELECT SUBSTR('', 4, 2) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--9-undefined",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -9) AS v FROM DUAL",
+      "converted": "SELECT RIGHT(CAST(NULL AS VARCHAR(10)), 9) AS v",
+      "warnings": [
+        "SUBSTR は従来のRIGHT変換を適用します。負数開始位置が文字列長を超える場合のNULL扱いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--9--1",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -9, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--9-0",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -9, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--9-2",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -9, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(RIGHT(CAST(NULL AS VARCHAR(10)), 9), 1, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来のRIGHT変換を適用します。負数開始位置が文字列長を超える場合のNULL扱いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--2-undefined",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -2) AS v FROM DUAL",
+      "converted": "SELECT RIGHT(CAST(NULL AS VARCHAR(10)), 2) AS v",
+      "warnings": [
+        "SUBSTR は従来のRIGHT変換を適用します。負数開始位置が文字列長を超える場合のNULL扱いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--2--1",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -2, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--2-0",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -2, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))--2-2",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), -2, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(RIGHT(CAST(NULL AS VARCHAR(10)), 2), 1, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来のRIGHT変換を適用します。負数開始位置が文字列長を超える場合のNULL扱いを確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-0-undefined",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 0) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 1) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-0--1",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 0, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-0-0",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 0, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-0-2",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 0, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 1, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-1-undefined",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 1) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 1) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-1--1",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 1, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-1-0",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 1, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-1-2",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 1, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 1, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-3-undefined",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 3) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 3) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-3--1",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 3, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-3-0",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 3, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-3-2",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 3, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 3, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-4-undefined",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 4) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 4) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-4--1",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 4, -1) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-4-0",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 4, 0) AS v FROM DUAL",
+      "converted": "SELECT NULL AS v",
+      "warnings": [],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    },
+    {
+      "id": "substr-CAST(NULL AS VARCHAR2(10))-4-2",
+      "source": "SELECT SUBSTR(CAST(NULL AS VARCHAR2(10)), 4, 2) AS v FROM DUAL",
+      "converted": "SELECT SUBSTR(CAST(NULL AS VARCHAR(10)), 4, 2) AS v",
+      "warnings": [
+        "SUBSTR は従来の式を維持します。空文字や開始位置が文字列長を超える場合、OracleのNULLとPostgreSQLの空文字の差を確認してください。"
+      ],
+      "oracle": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "postgres": {
+        "rows": [
+          [
+            null
+          ]
+        ]
+      },
+      "equivalent": true,
+      "disposition": "equivalent",
+      "passed": true,
+      "issues": []
+    }
+  ],
+  "cleanupComplete": true,
+  "passed": true,
+  "oracleVersion": "Oracle AI Database 26ai Free Release 23.26.3.0.0 - Develop, Learn, and Run for Free\nVersion 23.26.3.0.0",
+  "postgresVersion": "15.17 (Debian 15.17-1.pgdg13+1)",
+  "summary": {
+    "total": 179,
+    "equivalent": 164,
+    "policyExceptions": 15,
+    "failed": 0
+  },
+  "finishedAt": "2026-09-10T17:31:51.074Z"
+}

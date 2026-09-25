@@ -1,0 +1,54 @@
+{
+  "sourceFile": "index-business-ui.html",
+  "sourceSha256": "727f82c4ead06b285511c32a53669edc053086d18241207198e0fb09627ffe96",
+  "unitTests": 137,
+  "newRegressionTests": 38,
+  "baselineNewRegressions": {
+    "passed": 13,
+    "failed": 25
+  },
+  "currentNewRegressions": {
+    "passed": 38,
+    "failed": 0
+  },
+  "browser": {
+    "expected": 36,
+    "unexpected": 0,
+    "skipped": 0
+  },
+  "database": {
+    "total": 185,
+    "equivalent": 170,
+    "policyExceptions": 15,
+    "failed": 0
+  },
+  "uiUnchanged": true,
+  "performanceCases": [
+    {
+      "statements": 1000,
+      "inputCharacters": 31000,
+      "milliseconds": [
+        114,
+        101,
+        100
+      ],
+      "medianMilliseconds": 101
+    },
+    {
+      "statements": 10000,
+      "inputCharacters": 310000,
+      "milliseconds": [
+        961,
+        946,
+        951
+      ],
+      "medianMilliseconds": 951
+    }
+  ],
+  "environment": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "node": "v22.22.2"
+  },
+  "testedAt": "2026-09-22T09:30:37.562Z"
+}

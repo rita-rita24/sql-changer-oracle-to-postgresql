@@ -1,0 +1,16 @@
+[
+  {
+    "name": "repeated-6500",
+    "characters": 195000,
+    "beforeMs": 2188.6,
+    "afterMs": 211.73,
+    "outputIdentical": true
+  },
+  {
+    "name": "distinct-1500",
+    "characters": 48389,
+    "beforeMs": 393.4,
+    "afterMs": 362.12,
+    "outputIdentical": true
+  }
+]
